@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard v2 · VidiaVille</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            vv: {
+              blue: {
+                950: '#020617', 900: '#0a1628', 800: '#0f2744', 700: '#163a5f',
+                500: '#1d6fb8', 400: '#3b8fd4', 300: '#6bb0e8',
+              },
+              green: {
+                600: '#059669', 500: '#10b981', 400: '#34d399', 300: '#6ee7b7',
+              }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .vv-bg {
+      background:
+        radial-gradient(ellipse 70% 40% at 50% -10%, rgba(29,111,184,0.20), transparent),
+        radial-gradient(ellipse 50% 30% at 80% 110%, rgba(16,185,129,0.10), transparent),
+        #020617;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .tab-btn.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+  </style>
+</head>
+<body class="vv-bg text-white min-h-full">
+
+  <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="font-bold text-lg tracking-tight">
+        <span class="text-white">VidiaVille</span>
+        <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
+        <span class="text-sm text-white/70 hidden sm:inline">Dragon</span>
+        <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- Three main tabs -->
+    <nav class="grid grid-cols-3 gap-3 mb-8">
+      <button onclick="showPanel('account')" id="tab-account"
+              class="tab-btn active py-4 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Account
+      </button>
+      <button onclick="showPanel('companies')" id="tab-companies"
+              class="tab-btn py-4 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Companies
+      </button>
+      <button onclick="showPanel('pay')" id="tab-pay"
+              class="tab-btn py-4 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Pay
+      </button>
+    </nav>
+
+    <!-- ========== ACCOUNT PANEL ========== -->
+    <div id="panel-account" class="panel active">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Profile -->
+        <section class="md:col-span-1 bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+          <div class="flex flex-col items-center text-center">
+            <img src="https://cdn.discordapp.com/embed/avatars/2.png"
+                 class="w-20 h-20 rounded-full ring-2 ring-vv-green-500/50 object-cover mb-4" alt="" />
+            <h2 class="text-xl font-semibold">Dragon</h2>
+            <p class="text-vv-blue-300 text-sm">@dragon</p>
+            <p class="text-white/40 text-xs mt-2">Citizen since 12 Mar 2026</p>
+          </div>
+          <div class="mt-6 pt-5 border-t border-white/10 text-center">
+            <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Balance</div>
+            <div class="text-3xl font-bold text-vv-green-400 font-mono">$12,480.00</div>
+            <div class="text-xs text-white/30 mt-1">Vidiadollars</div>
+          </div>
+        </section>
+
+        <!-- Activity -->
+        <section class="md:col-span-2 bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+          <h3 class="text-sm font-medium text-white/60 mb-4">Recent income &amp; expenses</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
+              <div>
+                <div class="text-sm">Salary — Vidia Motors</div>
+                <div class="text-xs text-white/40">2 days ago</div>
+              </div>
+              <span class="text-vv-green-400 font-mono text-sm">+$1,200.00</span>
+            </div>
+            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
+              <div>
+                <div class="text-sm">Rent — Civic Housing</div>
+                <div class="text-xs text-white/40">3 days ago</div>
+              </div>
+              <span class="text-red-400 font-mono text-sm">−$800.00</span>
+            </div>
+            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
+              <div>
+                <div class="text-sm">Gig — Harbor Logistics</div>
+                <div class="text-xs text-white/40">5 days ago</div>
+              </div>
+              <span class="text-vv-green-400 font-mono text-sm">+$450.00</span>
+            </div>
+            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
+              <div>
+                <div class="text-sm">Fuel — Downtown Garage</div>
+                <div class="text-xs text-white/40">4 days ago</div>
+              </div>
+              <span class="text-red-400 font-mono text-sm">−$62.50</span>
+            </div>
+            <div class="flex justify-between items-center py-2.5">
+              <div>
+                <div class="text-sm">Transfer to J. Ortiz</div>
+                <div class="text-xs text-white/40">6 days ago</div>
+              </div>
+              <span class="text-red-400 font-mono text-sm">−$150.00</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ========== COMPANIES PANEL ========== -->
+    <div id="panel-companies" class="panel">
+
+      <!-- ===== BROWSE VIEW (gigs + open positions) ===== -->
+      <div id="companies-browse" class="space-y-8">
+
+        <!-- Create company trigger -->
+        <button type="button" onclick="openCreateCompany()"
+           class="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl border border-dashed border-vv-green-500/40 bg-vv-green-500/5 hover:bg-vv-green-500/10 hover:border-vv-green-500/60 text-vv-green-400 text-sm font-medium transition">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Create a Company
+        </button>
+
+        <!-- Your gigs -->
+        <div>
+          <h3 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Your current gigs</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a href="#" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="font-medium">Vidia Motors</div>
+                  <div class="text-sm text-white/50">Sales Associate</div>
+                </div>
+                <span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>
+              </div>
+            </a>
+            <a href="#" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="font-medium">Harbor Logistics</div>
+                  <div class="text-sm text-white/50">Dock Worker</div>
+                </div>
+                <span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>
+              </div>
+            </a>
+            <a href="#" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition sm:col-span-2">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="font-medium">Riverfront Café</div>
+                  <div class="text-sm text-white/50">Owner</div>
+                </div>
+                <span class="text-xs text-vv-blue-300 bg-vv-blue-500/15 px-2 py-0.5 rounded-full">Owner</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Open positions -->
+        <div>
+          <h3 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Open positions across the city</h3>
+          <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+                <tr>
+                  <th class="px-4 py-3 font-medium">Company</th>
+                  <th class="px-4 py-3 font-medium">Position</th>
+                  <th class="px-4 py-3 font-medium">Starting rate</th>
+                  <th class="px-4 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                <tr class="hover:bg-white/[0.02]">
+                  <td class="px-4 py-3">North Pier Shipping</td>
+                  <td class="px-4 py-3 text-white/70">Loader</td>
+                  <td class="px-4 py-3 font-mono text-vv-green-400">$18 / hr</td>
+                  <td class="px-4 py-3 text-right"><button class="text-xs text-vv-blue-300 hover:text-vv-green-400">View</button></td>
+                </tr>
+                <tr class="hover:bg-white/[0.02]">
+                  <td class="px-4 py-3">Civic Media</td>
+                  <td class="px-4 py-3 text-white/70">Junior Reporter</td>
+                  <td class="px-4 py-3 font-mono text-vv-green-400">$22 / hr</td>
+                  <td class="px-4 py-3 text-right"><button class="text-xs text-vv-blue-300 hover:text-vv-green-400">View</button></td>
+                </tr>
+                <tr class="hover:bg-white/[0.02]">
+                  <td class="px-4 py-3">Greenline Transit</td>
+                  <td class="px-4 py-3 text-white/70">Driver</td>
+                  <td class="px-4 py-3 font-mono text-vv-green-400">$25 / hr</td>
+                  <td class="px-4 py-3 text-right"><button class="text-xs text-vv-blue-300 hover:text-vv-green-400">View</button></td>
+                </tr>
+                <tr class="hover:bg-white/[0.02]">
+                  <td class="px-4 py-3">Sunset Construction</td>
+                  <td class="px-4 py-3 text-white/70">General Labour</td>
+                  <td class="px-4 py-3 font-mono text-vv-green-400">$20 / hr</td>
+                  <td class="px-4 py-3 text-right"><button class="text-xs text-vv-blue-300 hover:text-vv-green-400">View</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== CREATE COMPANY FORM ===== -->
+      <div id="create-company-form" class="hidden">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-xl font-semibold">Create a Company</h2>
+            <p class="text-sm text-white/45 mt-0.5">Fill out the application. An administrator will review and sanction starting funds.</p>
+          </div>
+        </div>
+
+        <form id="company-app-form" class="space-y-8" onsubmit="return false;">
+
+          <!-- 1. Picture -->
+          <section>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-2">Company picture</label>
+            <div id="logo-drop"
+                 class="relative w-36 h-36 rounded-2xl border-2 border-dashed border-white/15 bg-vv-blue-950/60 flex flex-col items-center justify-center cursor-pointer hover:border-vv-green-500/50 hover:bg-vv-green-500/5 transition overflow-hidden"
+                 onclick="document.getElementById('logo-input').click()">
+              <input type="file" id="logo-input" accept="image/*" class="hidden" onchange="previewLogo(event)" />
+              <div id="logo-placeholder" class="flex flex-col items-center gap-2 text-white/40 pointer-events-none">
+                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                <span class="text-xs text-center px-2">Drag &amp; drop<br>or click</span>
+              </div>
+              <img id="logo-preview" class="hidden absolute inset-0 w-full h-full object-cover" alt="Company logo preview" />
+            </div>
+          </section>
+
+          <!-- 2. Name -->
+          <section>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Company name</label>
+            <input type="text" id="co-name" placeholder="e.g. Riverfront Café"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </section>
+
+          <!-- 3. Description -->
+          <section>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Company description</label>
+            <textarea id="co-desc" rows="4" placeholder="What does this company do in VidiaVille?"
+                      class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 resize-y"></textarea>
+          </section>
+
+          <!-- 4. Co-owners -->
+          <section>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Co-owner(s)</label>
+            <p class="text-xs text-white/35 mb-2">Search and select a registered citizen. Free-typed names are not allowed.</p>
+            <div class="relative">
+              <input type="text" id="co-owner-search" placeholder="Search citizens…"
+                     class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50"
+                     oninput="filterCoOwners(this.value)" autocomplete="off" />
+              <ul id="co-owner-dropdown"
+                  class="absolute z-20 left-0 right-0 mt-1 bg-vv-blue-900 border border-white/10 rounded-xl shadow-xl max-h-40 overflow-y-auto hidden"></ul>
+            </div>
+            <div id="co-owner-list" class="flex flex-wrap gap-2 mt-3"></div>
+          </section>
+
+          <!-- 5. Jobs / roles -->
+          <section>
+            <div class="flex items-center justify-between mb-3">
+              <label class="text-xs text-white/50 uppercase tracking-wider">Jobs &amp; salaries</label>
+              <button type="button" onclick="addJobRow()"
+                      class="text-xs text-vv-green-400 hover:text-vv-green-300 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                Add role
+              </button>
+            </div>
+            <div id="jobs-list" class="space-y-4"></div>
+          </section>
+
+          <!-- 6. Application message -->
+          <section>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Application to administrators</label>
+            <textarea id="co-application" rows="4"
+                      placeholder="Explain why this company should exist, how it benefits VidiaVille, and any starting capital you are requesting…"
+                      class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 resize-y"></textarea>
+            <p class="text-xs text-white/30 mt-1.5">This message is sent to administrators for approval and sanctioning of starting funds.</p>
+          </section>
+
+          <!-- 7. Actions -->
+          <div class="flex flex-col sm:flex-row gap-3 pt-2 border-t border-white/10">
+            <button type="button" onclick="saveCompanyDraft()"
+                    class="flex-1 py-3 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium text-white/80 transition">
+              Save
+            </button>
+            <button type="button" onclick="cancelCompanyForm()"
+                    class="flex-1 py-3 rounded-xl border border-white/15 bg-white/5 hover:bg-red-500/10 hover:border-red-500/40 hover:text-red-400 text-sm font-medium text-white/80 transition">
+              Cancel
+            </button>
+            <button type="button" onclick="applyCompanyForm()"
+                    class="flex-1 py-3 rounded-xl bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 text-sm font-semibold transition">
+              Apply
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ========== PAY PANEL ========== -->
+    <div id="panel-pay" class="panel">
+      <div class="max-w-lg mx-auto">
+        <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+          <h2 class="text-xl font-semibold mb-1">Send Vidiadollars</h2>
+          <p class="text-sm text-white/50 mb-6">Transfer funds to another citizen of VidiaVille.</p>
+
+          <form class="space-y-5" onsubmit="return false;">
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Recipient</label>
+              <div class="relative">
+                <input type="text" id="pay-search" placeholder="Start typing a name…"
+                       class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 focus:border-vv-green-500/50"
+                       oninput="filterCitizens(this.value)" autocomplete="off" />
+                <!-- dropdown -->
+                <ul id="citizen-dropdown"
+                    class="absolute z-20 left-0 right-0 mt-1 bg-vv-blue-900 border border-white/10 rounded-xl shadow-xl max-h-48 overflow-y-auto hidden">
+                  <!-- filled by JS -->
+                </ul>
+              </div>
+              <p id="selected-citizen" class="mt-2 text-sm text-vv-green-400 hidden"></p>
+            </div>
+
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Amount (Vidiadollars)</label>
+              <input type="text" placeholder="0.00"
+                     class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+            </div>
+
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Note <span class="text-white/30">(optional)</span></label>
+              <input type="text" placeholder="What’s this for?"
+                     class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold py-3 rounded-xl transition">
+              Send payment
+            </button>
+          </form>
+        </section>
+
+        <p class="mt-4 text-center text-xs text-white/30">
+          Your current balance: <span class="text-vv-green-400 font-mono">$12,480.00</span>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="py-6 text-center text-white/20 text-xs tracking-wider">
+    VidiaVille Currency Manager · Launch v0.1 · Dashboard concept 2
+  </footer>
+
+  <script>
+    const citizens = [
+      "Dragon", "Jordan Ortiz", "Maya Chen", "Sam Okonkwo",
+      "Riley Park", "Casey Nguyen", "Morgan Blake", "Taylor Brooks",
+      "Jamie Soto", "Avery Quinn", "Cameron Reed", "Drew Patel"
+    ];
+
+    let coOwners = [];
+    let jobIdCounter = 0;
+
+    function showPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+      // if leaving companies while form is open, reset to browse
+      if (name !== 'companies') {
+        closeCreateCompany(true);
+      }
+    }
+
+    /* ---------- Pay panel (existing) ---------- */
+    function filterCitizens(query) {
+      const dropdown = document.getElementById('citizen-dropdown');
+      if (!query.trim()) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+      const q = query.toLowerCase();
+      const matches = citizens
+        .map(name => ({ name, score: name.toLowerCase().startsWith(q) ? 2 : name.toLowerCase().includes(q) ? 1 : 0 }))
+        .filter(m => m.score > 0)
+        .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+
+      if (matches.length === 0) {
+        dropdown.innerHTML = '<li class="px-4 py-3 text-sm text-white/40">No citizens found</li>';
+      } else {
+        dropdown.innerHTML = matches.map(m =>
+          `<li class="px-4 py-2.5 text-sm hover:bg-vv-green-500/10 cursor-pointer transition"
+               onclick="selectCitizen('${m.name}')">${m.name}</li>`
+        ).join('');
+      }
+      dropdown.classList.remove('hidden');
+    }
+
+    function selectCitizen(name) {
+      document.getElementById('pay-search').value = name;
+      document.getElementById('citizen-dropdown').classList.add('hidden');
+      const el = document.getElementById('selected-citizen');
+      el.textContent = 'Sending to: ' + name;
+      el.classList.remove('hidden');
+    }
+
+    /* ---------- Create company form ---------- */
+    function openCreateCompany() {
+      document.getElementById('companies-browse').classList.add('hidden');
+      document.getElementById('create-company-form').classList.remove('hidden');
+      // start with one empty job row if none
+      if (document.getElementById('jobs-list').children.length === 0) {
+        addJobRow();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function closeCreateCompany(force) {
+      document.getElementById('create-company-form').classList.add('hidden');
+      document.getElementById('companies-browse').classList.remove('hidden');
+      if (!force) {
+        // keep form data unless force-clear
+      }
+    }
+
+    function formHasData() {
+      const name = document.getElementById('co-name').value.trim();
+      const desc = document.getElementById('co-desc').value.trim();
+      const app = document.getElementById('co-application').value.trim();
+      const hasLogo = !document.getElementById('logo-preview').classList.contains('hidden');
+      const hasJobs = Array.from(document.querySelectorAll('.job-role-name')).some(i => i.value.trim());
+      return name || desc || app || hasLogo || coOwners.length > 0 || hasJobs;
+    }
+
+    function clearCompanyForm() {
+      document.getElementById('company-app-form').reset();
+      document.getElementById('logo-preview').classList.add('hidden');
+      document.getElementById('logo-preview').src = '';
+      document.getElementById('logo-placeholder').classList.remove('hidden');
+      document.getElementById('logo-input').value = '';
+      coOwners = [];
+      renderCoOwners();
+      document.getElementById('jobs-list').innerHTML = '';
+      jobIdCounter = 0;
+    }
+
+    function cancelCompanyForm() {
+      if (formHasData()) {
+        if (!confirm('Cancel and delete this application? Any entered data will be lost.')) return;
+      }
+      clearCompanyForm();
+      closeCreateCompany(true);
+    }
+
+    function saveCompanyDraft() {
+      // UI-only for now — later: POST to /api/company-draft
+      const data = collectCompanyForm();
+      try {
+        localStorage.setItem('vv_company_draft', JSON.stringify(data));
+      } catch (e) {}
+      alert('Application saved as a draft. You can come back and edit it later.');
+    }
+
+    function applyCompanyForm() {
+      const name = document.getElementById('co-name').value.trim();
+      if (!name) {
+        alert('Company name is required before applying.');
+        document.getElementById('co-name').focus();
+        return;
+      }
+      const data = collectCompanyForm();
+      // UI-only for now — later: POST to /api/company-apply
+      console.log('Company application submitted:', data);
+      alert('Application submitted to administrators for review.\nThey will sanction starting funds if approved.');
+      clearCompanyForm();
+      closeCreateCompany(true);
+    }
+
+    function collectJobFromRow(row) {
+      const leaderCb = row.querySelector('.job-is-leader');
+      const payCb = row.querySelector('.job-perm-pay');
+      const manageCb = row.querySelector('.job-perm-manage');
+      const isLeader = leaderCb ? leaderCb.checked : false;
+      const job = {
+        role: row.querySelector('.job-role-name').value.trim(),
+        salary: parseInt(row.querySelector('.job-salary').value, 10) || 0,
+        canPay: payCb ? payCb.checked : false,
+        canManage: manageCb ? manageCb.checked : false,
+        amount: parseInt(row.querySelector('.job-amount').value, 10) || 1,
+        isLeader,
+        underlings: [],
+      };
+      if (isLeader) {
+        const subRows = row.querySelectorAll(':scope > .job-subs > .job-subs-list > .job-row');
+        job.underlings = Array.from(subRows).map(collectJobFromRow);
+      }
+      return job;
+    }
+
+    function collectCompanyForm() {
+      // only top-level job rows (not nested underlings)
+      const topRows = document.querySelectorAll('#jobs-list > .job-row');
+      const jobs = Array.from(topRows).map(collectJobFromRow);
+      return {
+        name: document.getElementById('co-name').value.trim(),
+        description: document.getElementById('co-desc').value.trim(),
+        coOwners: [...coOwners],
+        jobs,
+        application: document.getElementById('co-application').value.trim(),
+        hasLogo: !document.getElementById('logo-preview').classList.contains('hidden'),
+      };
+    }
+
+    /* Logo drag & drop + preview */
+    function previewLogo(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.getElementById('logo-preview');
+        img.src = e.target.result;
+        img.classList.remove('hidden');
+        document.getElementById('logo-placeholder').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    (function setupLogoDrop() {
+      const zone = document.getElementById('logo-drop');
+      if (!zone) return;
+      ['dragenter', 'dragover'].forEach(evt => {
+        zone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          zone.classList.add('border-vv-green-500', 'bg-vv-green-500/10');
+        });
+      });
+      ['dragleave', 'drop'].forEach(evt => {
+        zone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          zone.classList.remove('border-vv-green-500', 'bg-vv-green-500/10');
+        });
+      });
+      zone.addEventListener('drop', (e) => {
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+          const input = document.getElementById('logo-input');
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          input.files = dt.files;
+          previewLogo({ target: input });
+        }
+      });
+    })();
+
+    /* Co-owners — select only from citizen list, no free typing */
+    function filterCoOwners(query) {
+      const dropdown = document.getElementById('co-owner-dropdown');
+      if (!query.trim()) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+      const q = query.toLowerCase();
+      const matches = citizens
+        .filter(n => !coOwners.includes(n))
+        .map(name => ({ name, score: name.toLowerCase().startsWith(q) ? 2 : name.toLowerCase().includes(q) ? 1 : 0 }))
+        .filter(m => m.score > 0)
+        .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+
+      dropdown.innerHTML = matches.length
+        ? matches.map(m =>
+            `<li class="px-4 py-2.5 text-sm hover:bg-vv-green-500/10 cursor-pointer transition"
+                 onclick="addCoOwner('${m.name}')">${m.name}</li>`
+          ).join('')
+        : '<li class="px-4 py-3 text-sm text-white/40">No matching citizens</li>';
+      dropdown.classList.remove('hidden');
+    }
+
+    function addCoOwner(name) {
+      // only accept names that exist in the citizens list
+      if (!citizens.includes(name)) return;
+      if (!coOwners.includes(name)) {
+        coOwners.push(name);
+        renderCoOwners();
+      }
+      document.getElementById('co-owner-search').value = '';
+      document.getElementById('co-owner-dropdown').classList.add('hidden');
+    }
+
+    function removeCoOwner(name) {
+      coOwners = coOwners.filter(n => n !== name);
+      renderCoOwners();
+    }
+
+    function renderCoOwners() {
+      const list = document.getElementById('co-owner-list');
+      list.innerHTML = coOwners.map(n =>
+        `<span class="inline-flex items-center gap-1.5 bg-vv-blue-800/60 border border-white/10 rounded-full px-3 py-1 text-sm">
+          ${n}
+          <button type="button" onclick="removeCoOwner('${n}')" class="text-white/40 hover:text-red-400 leading-none">&times;</button>
+        </span>`
+      ).join('');
+    }
+
+    /* Jobs / roles — with Leader nesting */
+    function addJobRow(parentContainer, isSub) {
+      const id = ++jobIdCounter;
+      const row = document.createElement('div');
+      row.className = 'job-row bg-vv-blue-950/50 border border-white/10 rounded-xl p-4 space-y-3' + (isSub ? ' border-l-2 border-l-vv-green-500/40' : '');
+      row.dataset.jobId = id;
+      row.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-white/40 mb-1">Role name</label>
+              <input type="text" class="job-role-name w-full bg-vv-blue-950 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" placeholder="${isSub ? 'e.g. Junior Associate' : 'e.g. Sales Associate'}" />
+            </div>
+            <div>
+              <label class="block text-xs text-white/40 mb-1">Salary ($/h)</label>
+              <input type="number" min="0" step="1" class="job-salary w-full bg-vv-blue-950 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" placeholder="20" />
+            </div>
+          </div>
+          <button type="button" onclick="this.closest('.job-row').remove()" class="text-white/30 hover:text-red-400 text-lg leading-none mt-5" title="Remove role">&times;</button>
+        </div>
+        <div class="flex flex-wrap items-center gap-4">
+          ${!isSub ? `
+          <label class="inline-flex items-center gap-2 text-sm text-white/60 cursor-pointer">
+            <input type="checkbox" class="job-perm-pay rounded border-white/20 bg-vv-blue-950 text-vv-green-500 focus:ring-vv-green-500/40" />
+            Can pay underlings
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-white/60 cursor-pointer">
+            <input type="checkbox" class="job-perm-manage rounded border-white/20 bg-vv-blue-950 text-vv-green-500 focus:ring-vv-green-500/40" />
+            Can manage company money
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-vv-green-400/90 cursor-pointer">
+            <input type="checkbox" class="job-is-leader rounded border-white/20 bg-vv-blue-950 text-vv-green-500 focus:ring-vv-green-500/40" onchange="toggleLeader(this)" />
+            Leader
+          </label>
+          ` : ''}
+          <div class="flex items-center gap-2 ${isSub ? '' : 'ml-auto'}">
+            <label class="text-xs text-white/40">Copies</label>
+            <input type="number" min="1" max="50" value="1" class="job-amount w-16 bg-vv-blue-950 border border-white/10 rounded-lg px-2 py-1.5 text-sm font-mono text-center focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+        </div>
+        ${!isSub ? `
+        <div class="job-subs hidden pl-3 border-l border-vv-green-500/25 space-y-3 mt-1">
+          <div class="job-subs-list space-y-3"></div>
+          <button type="button" onclick="addSubRole(this)"
+                  class="text-xs text-vv-green-400 hover:text-vv-green-300 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            Add role under this leader
+          </button>
+        </div>
+        ` : ''}
+      `;
+      const target = parentContainer || document.getElementById('jobs-list');
+      target.appendChild(row);
+      return row;
+    }
+
+    function toggleLeader(checkbox) {
+      const row = checkbox.closest('.job-row');
+      const subs = row.querySelector('.job-subs');
+      if (!subs) return;
+      if (checkbox.checked) {
+        subs.classList.remove('hidden');
+      } else {
+        // hide and clear sub-roles when unchecking
+        if (subs.querySelectorAll('.job-row').length > 0) {
+          if (!confirm('Unchecking Leader will remove the roles underneath. Continue?')) {
+            checkbox.checked = true;
+            return;
+          }
+          subs.querySelector('.job-subs-list').innerHTML = '';
+        }
+        subs.classList.add('hidden');
+      }
+    }
+
+    function addSubRole(btn) {
+      const subsList = btn.closest('.job-subs').querySelector('.job-subs-list');
+      addJobRow(subsList, true);
+    }
+
+    // close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#pay-search') && !e.target.closest('#citizen-dropdown')) {
+        document.getElementById('citizen-dropdown')?.classList.add('hidden');
+      }
+      if (!e.target.closest('#co-owner-search') && !e.target.closest('#co-owner-dropdown')) {
+        document.getElementById('co-owner-dropdown')?.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

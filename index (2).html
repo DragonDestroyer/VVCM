@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VidiaVille Currency Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            vv: {
+              // VidiaVille blues
+              blue: {
+                950: '#020617',
+                900: '#0a1628',
+                800: '#0f2744',
+                700: '#163a5f',
+                500: '#1d6fb8',
+                400: '#3b8fd4',
+                300: '#6bb0e8',
+              },
+              // VidiaVille greens
+              green: {
+                600: '#059669',
+                500: '#10b981',
+                400: '#34d399',
+                300: '#6ee7b7',
+              }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .vv-gradient {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 111, 184, 0.25), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(16, 185, 129, 0.12), transparent),
+        #020617;
+    }
+  </style>
+</head>
+<body class="vv-gradient text-white min-h-full flex flex-col">
+  <main class="flex-1 flex items-center justify-center px-4 py-16">
+    <div class="text-center max-w-2xl">
+
+      <!-- small official label -->
+      <p class="inline-flex items-center gap-2 text-vv-green-400 font-medium tracking-[0.2em] uppercase text-xs mb-6">
+        <span class="w-8 h-px bg-vv-green-500/70"></span>
+        Launch v0.1
+        <span class="w-8 h-px bg-vv-green-500/70"></span>
+      </p>
+
+      <!-- main title -->
+      <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-5 leading-tight">
+        <span class="text-white">VidiaVille</span><br>
+        <span class="text-vv-blue-300">Currency Manager</span>
+      </h1>
+
+      <!-- primary tagline -->
+      <p class="text-xl sm:text-2xl text-white/90 font-medium mb-4">
+        Trust us with your life’s earnings.
+      </p>
+
+      <!-- supporting line – citizen language -->
+      <p class="text-vv-blue-300/80 text-sm sm:text-base mb-12 max-w-lg mx-auto leading-relaxed">
+        The official ledger for balances, companies, gigs, and civic reports.<br>
+        Built for the citizens who keep VidiaVille running.
+      </p>
+
+      <!-- CTA -->
+      <a href="dashboard.html"
+         class="inline-flex items-center gap-2 bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold px-9 py-3.5 rounded-xl transition shadow-lg shadow-vv-green-500/25">
+        Sign in with Discord
+      </a>
+
+      <!-- subtle secondary note -->
+      <p class="mt-8 text-xs text-white/40 tracking-wide">
+        Access restricted to registered VidiaVille citizens
+      </p>
+    </div>
+  </main>
+
+  <footer class="py-5 text-center text-white/30 text-xs tracking-wider">
+    VidiaVille Currency Manager · Launch v0.1
+  </footer>
+</body>
+</html>
