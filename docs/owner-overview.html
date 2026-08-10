@@ -66,7 +66,7 @@
   <!-- Header -->
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="dashboard.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
+      <a href="dashboard" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
         <span class="text-white">VidiaVille</span>
         <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
       </a>
@@ -81,7 +81,7 @@
   <main class="max-w-5xl mx-auto px-4 py-8">
 
     <!-- Back link -->
-    <a href="dashboard.html" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
+    <a href="dashboard" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
       Back to dashboard
     </a>
@@ -285,7 +285,7 @@
           </table>
         </div>
         <p class="text-xs text-white/30 mt-3">
-          <a href="worker-overview.html" class="text-vv-blue-300 hover:text-vv-green-400 transition">Open sample worker overview</a>
+          <a href="worker-overview" class="text-vv-blue-300 hover:text-vv-green-400 transition">Open sample worker overview</a>
           (Vidia Motors · Sales Floor)
         </p>
       </section>
@@ -363,6 +363,157 @@
     <!-- ========== MANAGE (owner tools) ========== -->
     <div id="panel-manage" class="panel space-y-6">
       <p class="text-sm text-white/45">Owner tools for Riverfront Café. Actions are stored locally for now and prepared for database export.</p>
+
+      <!-- Contracts hub -->
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-1">Contracts</h2>
+        <p class="text-sm text-white/45 mb-4">Propose work agreements to companies or citizens. Proposals expire after 72 hours if not accepted.</p>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button type="button" onclick="showContractView('create')"
+                  class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2.5 rounded-xl transition">
+            Create contract
+          </button>
+          <button type="button" onclick="showContractView('pending')"
+                  class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium px-4 py-2.5 rounded-xl transition">
+            View pending contracts
+          </button>
+          <button type="button" onclick="showContractView('active')"
+                  class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium px-4 py-2.5 rounded-xl transition">
+            View active contracts
+          </button>
+        </div>
+
+        <!-- Create contract form -->
+        <div id="contract-create" class="hidden border-t border-white/10 pt-5 mt-2 space-y-4">
+          <h3 class="text-sm font-medium text-white/60 uppercase tracking-wider">New contract proposal</h3>
+          <form id="contract-form" class="space-y-4" onsubmit="return sendContract(event)">
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Contract with</label>
+              <div class="flex flex-wrap gap-2 mb-2">
+                <button type="button" id="target-type-resident" onclick="setContractTargetType('resident')"
+                        class="target-type-btn active text-xs px-3 py-1.5 rounded-lg border border-vv-green-500/40 bg-vv-green-500/10 text-vv-green-400">Citizen</button>
+                <button type="button" id="target-type-company" onclick="setContractTargetType('company')"
+                        class="target-type-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/50 hover:border-vv-green-500/30">Company</button>
+              </div>
+              <select id="contract-target" class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
+                <!-- filled by JS -->
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Payment structure</label>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" id="pay-type-hourly" onclick="setPayType('hourly')"
+                        class="pay-type-btn active flex-1 min-w-[8rem] text-sm px-3 py-2.5 rounded-xl border border-vv-green-500/40 bg-vv-green-500/10 text-vv-green-400">
+                  Pay per hour
+                </button>
+                <button type="button" id="pay-type-completion" onclick="setPayType('completion')"
+                        class="pay-type-btn flex-1 min-w-[8rem] text-sm px-3 py-2.5 rounded-xl border border-white/10 text-white/50 hover:border-vv-green-500/30">
+                  Pay upon completion
+                </button>
+              </div>
+            </div>
+
+            <div id="pay-hourly-fields" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Hourly rate ($/h)</label>
+                <input type="number" id="contract-hourly" min="1" step="1" placeholder="20"
+                       class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+              </div>
+            </div>
+            <div id="pay-completion-fields" class="hidden">
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Total amount (Vidiadollars)</label>
+              <input type="number" id="contract-total" min="1" step="0.01" placeholder="500.00"
+                     class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+            </div>
+
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Contract length</label>
+              <div class="flex gap-2">
+                <input type="number" id="contract-duration" min="1" step="1" required placeholder="1" value="1"
+                       class="w-28 bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+                <select id="contract-duration-unit" class="flex-1 bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
+                  <option value="hours">Hours</option>
+                  <option value="days" selected>Days</option>
+                  <option value="months">Months</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Description</label>
+              <textarea id="contract-desc" rows="3" required placeholder="What work is covered by this contract?"
+                        class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 resize-y"></textarea>
+            </div>
+
+            <!-- Company access list -->
+            <div>
+              <label class="inline-flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                <input type="checkbox" id="contract-access-toggle" onchange="toggleAccessChecklist()"
+                       class="rounded border-white/20 bg-vv-blue-950 text-vv-green-500 focus:ring-vv-green-500/40" />
+                Grant company members access to this contract
+              </label>
+              <div id="contract-access-list" class="hidden mt-3 bg-vv-blue-950/50 border border-white/10 rounded-xl p-3 space-y-2 max-h-40 overflow-y-auto vv-scroll">
+                <p class="text-xs text-white/40 mb-1">Select who can open the contract and use the general chat:</p>
+                <label class="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                  <input type="checkbox" class="access-member rounded border-white/20 bg-vv-blue-950 text-vv-green-500" value="Dragon" checked disabled />
+                  Dragon <span class="text-xs text-white/30">(owner · always)</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                  <input type="checkbox" class="access-member rounded border-white/20 bg-vv-blue-950 text-vv-green-500" value="Jordan Ortiz" />
+                  Jordan Ortiz <span class="text-xs text-white/30">Shift Lead</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                  <input type="checkbox" class="access-member rounded border-white/20 bg-vv-blue-950 text-vv-green-500" value="Maya Chen" />
+                  Maya Chen <span class="text-xs text-white/30">Barista</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                  <input type="checkbox" class="access-member rounded border-white/20 bg-vv-blue-950 text-vv-green-500" value="Riley Park" />
+                  Riley Park <span class="text-xs text-white/30">Kitchen</span>
+                </label>
+              </div>
+            </div>
+
+            <p class="text-xs text-white/35">The other party has <span class="text-vv-green-400/90">72 hours</span> to accept. Unaccepted proposals expire automatically.</p>
+
+            <div class="flex flex-wrap gap-3 pt-1">
+              <button type="submit" class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-6 py-2.5 rounded-xl transition">
+                Send proposal
+              </button>
+              <button type="button" onclick="cancelContractForm()"
+                      class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium px-5 py-2.5 rounded-xl transition">
+                Cancel
+              </button>
+            </div>
+            <p id="contract-send-status" class="text-sm text-vv-green-400 hidden"></p>
+          </form>
+        </div>
+
+        <!-- Pending contracts -->
+        <div id="contract-pending" class="hidden border-t border-white/10 pt-5 mt-2 space-y-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-medium text-white/60 uppercase tracking-wider">Pending proposals</h3>
+            <button type="button" onclick="showContractView(null)" class="text-xs text-white/35 hover:text-white/60">Close</button>
+          </div>
+          <div>
+            <h4 class="text-xs text-white/40 mb-2">Outgoing <span class="text-white/25">(awaiting their response)</span></h4>
+            <ul id="pending-outgoing" class="space-y-2"></ul>
+          </div>
+          <div>
+            <h4 class="text-xs text-white/40 mb-2">Incoming <span class="text-white/25">(awaiting your response)</span></h4>
+            <ul id="pending-incoming" class="space-y-2"></ul>
+          </div>
+        </div>
+
+        <!-- Active contracts -->
+        <div id="contract-active" class="hidden border-t border-white/10 pt-5 mt-2 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-medium text-white/60 uppercase tracking-wider">Active contracts</h3>
+            <button type="button" onclick="showContractView(null)" class="text-xs text-white/35 hover:text-white/60">Close</button>
+          </div>
+          <ul id="active-contracts-list" class="space-y-2"></ul>
+        </div>
+      </section>
 
       <!-- Record transaction -->
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
@@ -967,9 +1118,262 @@
       el.classList.remove('hidden');
     }
 
+    /* ---------- Contracts ---------- */
+    const CONTRACT_CITIZENS = [
+      'Maya Chen', 'Jordan Ortiz', 'Riley Park', 'Sam Okonkwo', 'Alex Rivera', 'Casey Nguyen',
+    ];
+    const CONTRACT_COMPANIES = [
+      'Vidia Motors', 'Harbor Logistics', 'North Pier Shipping', 'Civic Works Bureau',
+    ];
+
+    let contractTargetType = 'resident';
+    let contractPayType = 'hourly';
+
+    // Sample pending / active (UI demo — later from DB)
+    let pendingOutgoing = [
+      {
+        id: 'c_out_1',
+        targetType: 'resident',
+        target: 'Casey Nguyen',
+        payType: 'hourly',
+        rate: 22,
+        duration: 14,
+        unit: 'days',
+        description: 'Event catering support for harvest weekend.',
+        sentAt: Date.now() - 20 * 3600 * 1000,
+        expiresAt: Date.now() + 52 * 3600 * 1000,
+      },
+    ];
+    let pendingIncoming = [
+      {
+        id: 'c_in_1',
+        from: 'Harbor Logistics',
+        fromType: 'company',
+        payType: 'completion',
+        total: 800,
+        duration: 3,
+        unit: 'days',
+        description: 'Supply drop coordination at the riverside dock.',
+        sentAt: Date.now() - 10 * 3600 * 1000,
+        expiresAt: Date.now() + 62 * 3600 * 1000,
+      },
+    ];
+    let activeContracts = [
+      {
+        id: 'c_act_1',
+        with: 'Maya Chen',
+        withType: 'resident',
+        payType: 'hourly',
+        rate: 24,
+        duration: 1,
+        unit: 'months',
+        description: 'Weekend rush barista coverage (special project rate).',
+        startedAt: Date.now() - 5 * 24 * 3600 * 1000,
+      },
+    ];
+
+    function showContractView(which) {
+      document.getElementById('contract-create').classList.add('hidden');
+      document.getElementById('contract-pending').classList.add('hidden');
+      document.getElementById('contract-active').classList.add('hidden');
+      if (which === 'create') {
+        document.getElementById('contract-create').classList.remove('hidden');
+        setContractTargetType(contractTargetType);
+        setPayType(contractPayType);
+      } else if (which === 'pending') {
+        document.getElementById('contract-pending').classList.remove('hidden');
+        renderPendingContracts();
+      } else if (which === 'active') {
+        document.getElementById('contract-active').classList.remove('hidden');
+        renderActiveContracts();
+      }
+    }
+
+    function setContractTargetType(type) {
+      contractTargetType = type;
+      document.querySelectorAll('.target-type-btn').forEach(btn => {
+        const on = (btn.id === 'target-type-' + type);
+        btn.classList.toggle('active', on);
+        btn.classList.toggle('border-vv-green-500/40', on);
+        btn.classList.toggle('bg-vv-green-500/10', on);
+        btn.classList.toggle('text-vv-green-400', on);
+        btn.classList.toggle('border-white/10', !on);
+        btn.classList.toggle('text-white/50', !on);
+      });
+      const sel = document.getElementById('contract-target');
+      const list = type === 'company' ? CONTRACT_COMPANIES : CONTRACT_CITIZENS;
+      sel.innerHTML = list.map(n => `<option value="${n}">${n}</option>`).join('');
+    }
+
+    function setPayType(type) {
+      contractPayType = type;
+      document.querySelectorAll('.pay-type-btn').forEach(btn => {
+        const on = (btn.id === 'pay-type-' + type);
+        btn.classList.toggle('active', on);
+        btn.classList.toggle('border-vv-green-500/40', on);
+        btn.classList.toggle('bg-vv-green-500/10', on);
+        btn.classList.toggle('text-vv-green-400', on);
+        btn.classList.toggle('border-white/10', !on);
+        btn.classList.toggle('text-white/50', !on);
+      });
+      document.getElementById('pay-hourly-fields').classList.toggle('hidden', type !== 'hourly');
+      document.getElementById('pay-completion-fields').classList.toggle('hidden', type !== 'completion');
+    }
+
+    function cancelContractForm() {
+      document.getElementById('contract-form').reset();
+      setPayType('hourly');
+      setContractTargetType('resident');
+      document.getElementById('contract-create').classList.add('hidden');
+      document.getElementById('contract-send-status').classList.add('hidden');
+    }
+
+    function hoursLeft(expiresAt) {
+      const h = Math.max(0, (expiresAt - Date.now()) / 3600000);
+      if (h >= 24) return Math.floor(h / 24) + 'd ' + Math.floor(h % 24) + 'h left';
+      return Math.floor(h) + 'h left';
+    }
+
+    function payLabel(c) {
+      if (c.payType === 'hourly') return '$' + c.rate + ' / h';
+      return '$' + Number(c.total).toFixed(2) + ' on completion';
+    }
+
+    function renderPendingContracts() {
+      const out = document.getElementById('pending-outgoing');
+      const inc = document.getElementById('pending-incoming');
+      out.innerHTML = pendingOutgoing.length
+        ? pendingOutgoing.map(c => `
+          <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3 text-sm">
+            <div class="flex justify-between gap-2">
+              <span class="font-medium">To ${c.target} <span class="text-white/35 text-xs">(${c.targetType})</span></span>
+              <span class="text-xs text-amber-400/90">${hoursLeft(c.expiresAt)}</span>
+            </div>
+            <div class="text-white/50 mt-1">${c.description}</div>
+            <div class="text-xs text-white/35 mt-1">${payLabel(c)} · ${c.duration} ${c.unit}</div>
+          </li>`).join('')
+        : '<li class="text-sm text-white/35">No outgoing proposals.</li>';
+      inc.innerHTML = pendingIncoming.length
+        ? pendingIncoming.map(c => `
+          <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3 text-sm">
+            <div class="flex justify-between gap-2">
+              <span class="font-medium">From ${c.from} <span class="text-white/35 text-xs">(${c.fromType})</span></span>
+              <span class="text-xs text-amber-400/90">${hoursLeft(c.expiresAt)}</span>
+            </div>
+            <div class="text-white/50 mt-1">${c.description}</div>
+            <div class="text-xs text-white/35 mt-1 mb-3">${payLabel(c)} · ${c.duration} ${c.unit}</div>
+            <div class="flex gap-2">
+              <button type="button" onclick="respondContract('${c.id}', true)" class="text-xs bg-vv-green-500/20 text-vv-green-400 border border-vv-green-500/30 px-3 py-1.5 rounded-lg hover:bg-vv-green-500/30">Accept</button>
+              <button type="button" onclick="respondContract('${c.id}', false)" class="text-xs border border-white/15 text-white/50 px-3 py-1.5 rounded-lg hover:bg-white/5">Decline</button>
+            </div>
+          </li>`).join('')
+        : '<li class="text-sm text-white/35">No incoming proposals.</li>';
+    }
+
+    function renderActiveContracts() {
+      const list = document.getElementById('active-contracts-list');
+      list.innerHTML = activeContracts.length
+        ? activeContracts.map(c => `
+          <li>
+            <a href="contract-overview?id=${encodeURIComponent(c.id)}"
+               class="block bg-vv-blue-950/50 border border-white/10 hover:border-vv-green-500/40 rounded-xl px-4 py-3 text-sm transition">
+              <div class="flex justify-between gap-2">
+                <span class="font-medium">With ${c.with}</span>
+                <span class="text-xs text-vv-green-400">Active · open →</span>
+              </div>
+              <div class="text-white/50 mt-1">${c.description}</div>
+              <div class="text-xs text-white/35 mt-1">${payLabel(c)} · ${c.duration} ${c.unit}</div>
+            </a>
+          </li>`).join('')
+        : '<li class="text-sm text-white/35">No active contracts.</li>';
+    }
+
+    function toggleAccessChecklist() {
+      const on = document.getElementById('contract-access-toggle').checked;
+      document.getElementById('contract-access-list').classList.toggle('hidden', !on);
+    }
+
+    function getSelectedAccess() {
+      if (!document.getElementById('contract-access-toggle').checked) {
+        return ['Dragon']; // owner only
+      }
+      return Array.from(document.querySelectorAll('.access-member:checked')).map(el => el.value);
+    }
+
+    function respondContract(id, accept) {
+      const idx = pendingIncoming.findIndex(c => c.id === id);
+      if (idx < 0) return;
+      const c = pendingIncoming[idx];
+      pendingIncoming.splice(idx, 1);
+      if (accept) {
+        activeContracts.unshift({
+          id: c.id,
+          with: c.from,
+          withType: c.fromType,
+          payType: c.payType,
+          rate: c.rate,
+          total: c.total,
+          duration: c.duration,
+          unit: c.unit,
+          description: c.description,
+          startedAt: Date.now(),
+        });
+        exportToDatabase('contract_accepted', { id: c.id, from: c.from });
+      } else {
+        exportToDatabase('contract_declined', { id: c.id, from: c.from });
+      }
+      renderPendingContracts();
+    }
+
+    function sendContract(e) {
+      e.preventDefault();
+      const target = document.getElementById('contract-target').value;
+      const duration = parseInt(document.getElementById('contract-duration').value, 10);
+      const unit = document.getElementById('contract-duration-unit').value;
+      const description = document.getElementById('contract-desc').value.trim();
+      if (!target || !duration || !description) {
+        alert('Fill in target, length, and description.');
+        return false;
+      }
+      const proposal = {
+        id: 'c_out_' + Date.now(),
+        targetType: contractTargetType,
+        target,
+        payType: contractPayType,
+        duration,
+        unit,
+        description,
+        sentAt: Date.now(),
+        expiresAt: Date.now() + 72 * 3600 * 1000,
+      };
+      if (contractPayType === 'hourly') {
+        const rate = parseFloat(document.getElementById('contract-hourly').value);
+        if (!rate || rate <= 0) { alert('Enter a valid hourly rate.'); return false; }
+        proposal.rate = rate;
+      } else {
+        const total = parseFloat(document.getElementById('contract-total').value);
+        if (!total || total <= 0) { alert('Enter a valid total amount.'); return false; }
+        proposal.total = total;
+      }
+      proposal.access = getSelectedAccess();
+      pendingOutgoing.unshift(proposal);
+      exportToDatabase('contract_proposal', proposal);
+      const st = document.getElementById('contract-send-status');
+      st.textContent = 'Proposal sent to ' + target + '. They have 72 hours to accept.';
+      st.classList.remove('hidden');
+      document.getElementById('contract-form').reset();
+      document.getElementById('contract-access-list').classList.add('hidden');
+      setPayType('hourly');
+      setContractTargetType(contractTargetType);
+      setTimeout(() => st.classList.add('hidden'), 5000);
+      return false;
+    }
+
     // Init movement chart on load
     document.addEventListener('DOMContentLoaded', () => {
       setMovementRange('week');
+      setContractTargetType('resident');
+      setPayType('hourly');
     });
   </script>
 </body>
