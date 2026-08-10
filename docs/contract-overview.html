@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Contract · VidiaVille</title>
+  <script src="api.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -58,6 +59,9 @@
         <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
       </a>
       <div class="flex items-center gap-3">
+        <a href="administrator-dashboard" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
+           title="Administrator panel">Admin Panel</a>
+
         <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
         <span class="text-sm text-white/70 hidden sm:inline">Dragon_Destroyer</span>
         <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
@@ -195,33 +199,12 @@
   <script>
     const DB_ENDPOINT = null; // placeholder for future API
 
-    const CONTRACT = {
-      id: 'c_act_1',
-      title: 'Weekend rush coverage',
-      with: 'PotatoQueen',
-      withType: 'Citizen',
-      pay: 'Ꝟ24 / h',
-      length: '1 month',
-      started: 'Aug 4, 2026',
-      description: 'Weekend rush barista coverage (special project rate).',
-      access: [
-        { name: 'Dragon_Destroyer', role: 'owner' },
-        { name: 'Vinco', role: 'shift lead' },
-        { name: 'PotatoQueen', role: 'contractor' },
-      ],
+    let CONTRACT = {
+      id: '', title: '—', with: '—', withType: '', pay: '—', length: '—', started: '—',
+      description: '', access: [],
     };
 
-    const chats = {
-      general: [
-        { who: 'Vinco', at: 'Yesterday 18:10', text: 'Shift board is up for Fri–Sun. Maya you are on open Saturday.' },
-        { who: 'PotatoQueen', at: 'Yesterday 18:22', text: 'Got it — I’ll be there at 07:30.' },
-        { who: 'Dragon_Destroyer', at: 'Today 09:05', text: 'Project rate is still +Ꝟ4 through Sunday night.' },
-      ],
-      owners: [
-        { who: 'Dragon_Destroyer', at: 'Aug 4 11:00', text: 'Contract live. Rate locked at Ꝟ24 for the project window.' },
-        { who: 'PotatoQueen', at: 'Aug 4 11:15', text: 'Confirmed on my side. Thanks.' },
-      ],
-    };
+    const chats = { general: [], owners: [] };
 
     function exportToDatabase(kind, payload) {
       const record = { kind, payload, at: new Date().toISOString() };
@@ -324,5 +307,43 @@
 
     document.addEventListener('DOMContentLoaded', loadFromQuery);
   </script>
+
+  <script>
+    // Admin panel access — only these citizens see the header control
+    window.VV_ADMIN_PANEL_ACCESS = ['Dragon_Destroyer', 'Apple'];
+    window.VV_CURRENT_USER = window.VV_CURRENT_USER || 'Dragon_Destroyer';
+    (function showAdminPanelButton() {
+      const btn = document.getElementById('admin-panel-btn');
+      if (!btn) return;
+      const allowed = window.VV_ADMIN_PANEL_ACCESS.map(n => n.toLowerCase());
+      if (allowed.includes(String(window.VV_CURRENT_USER).toLowerCase())) {
+        btn.classList.remove('hidden');
+      }
+    })();
+  </script>
+
+
+  <script>
+    async function loadContractOverview() {
+      const params = new URLSearchParams(location.search);
+      const id = params.get('id');
+      if (!id || !VV_WORKER.baseUrl) {
+        if (typeof loadFromQuery === 'function') loadFromQuery();
+        return;
+      }
+      const res = await VV_WORKER.get('/contracts/' + encodeURIComponent(id));
+      if (res.ok && res.data) {
+        Object.assign(CONTRACT, res.data);
+      }
+      const chatRes = await VV_WORKER.get('/contracts/' + encodeURIComponent(id) + '/chat');
+      if (chatRes.ok && chatRes.data) {
+        chats.general = chatRes.data.general || [];
+        chats.owners = chatRes.data.owners || [];
+      }
+      if (typeof loadFromQuery === 'function') loadFromQuery();
+    }
+    document.addEventListener('DOMContentLoaded', loadContractOverview);
+  </script>
+
 </body>
 </html>

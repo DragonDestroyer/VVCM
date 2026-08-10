@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vidia Motors · Worker · VidiaVille</title>
+  <script src="api.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -64,6 +65,9 @@
         <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
       </a>
       <div class="flex items-center gap-3">
+        <a href="administrator-dashboard" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
+           title="Administrator panel">Admin Panel</a>
+
         <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
         <span class="text-sm text-white/70 hidden sm:inline">Dragon_Destroyer</span>
         <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
@@ -97,7 +101,7 @@
         </div>
         <div class="sm:text-right shrink-0 bg-vv-blue-950/50 border border-white/5 rounded-xl px-5 py-4 min-w-[11rem]">
           <div class="text-xs text-white/40 uppercase tracking-wider">Your rate</div>
-          <div class="text-2xl font-bold text-vv-green-400 font-mono mt-0.5" id="worker-rate">Ꝟ24 / h</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono mt-0.5" id="worker-rate">—</div>
           <div class="text-xs text-white/35 mt-1">Base Ꝟ20 · <span class="text-vv-green-400/90">+Ꝟ4 project</span></div>
         </div>
       </div>
@@ -123,7 +127,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Base rate</div>
-          <div class="text-2xl font-bold font-mono text-white/90">Ꝟ20 / h</div>
+          <div class="text-2xl font-bold font-mono text-white/90">—</div>
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Active modifiers</div>
@@ -132,7 +136,7 @@
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Effective rate</div>
-          <div class="text-2xl font-bold text-vv-green-400 font-mono">Ꝟ24 / h</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono">—</div>
         </div>
       </div>
 
@@ -190,7 +194,7 @@
                   <div class="text-xs text-white/35">@dragon_destroyer</div>
                 </td>
                 <td class="px-4 py-3">Sales Associate</td>
-                <td class="px-4 py-3 font-mono text-vv-green-400">Ꝟ24 / h</td>
+                <td class="px-4 py-3 font-mono text-vv-green-400">—</td>
               </tr>
               <tr class="hover:bg-white/[0.02]">
                 <td class="px-4 py-3">
@@ -198,7 +202,7 @@
                   <div class="text-xs text-white/35">@vincofoods</div>
                 </td>
                 <td class="px-4 py-3">Floor Lead</td>
-                <td class="px-4 py-3 font-mono text-vv-green-400">Ꝟ24 / h</td>
+                <td class="px-4 py-3 font-mono text-vv-green-400">—</td>
               </tr>
             </tbody>
           </table>
@@ -256,5 +260,35 @@
       document.getElementById('tab-' + name).classList.add('active');
     }
   </script>
+
+  <script>
+    // Admin panel access — only these citizens see the header control
+    window.VV_ADMIN_PANEL_ACCESS = ['Dragon_Destroyer', 'Apple'];
+    window.VV_CURRENT_USER = window.VV_CURRENT_USER || 'Dragon_Destroyer';
+    (function showAdminPanelButton() {
+      const btn = document.getElementById('admin-panel-btn');
+      if (!btn) return;
+      const allowed = window.VV_ADMIN_PANEL_ACCESS.map(n => n.toLowerCase());
+      if (allowed.includes(String(window.VV_CURRENT_USER).toLowerCase())) {
+        btn.classList.remove('hidden');
+      }
+    })();
+  </script>
+
+
+  <script>
+    async function loadWorkerOverview() {
+      const params = new URLSearchParams(location.search);
+      const id = params.get('id') || '';
+      if (!VV_WORKER.baseUrl) return;
+      const res = await VV_WORKER.get('/companies/' + encodeURIComponent(id) + '/worker-view');
+      if (res.ok && res.data) {
+        // Page-specific elements can be filled when worker shapes the response
+        console.log('[worker-view]', res.data);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', loadWorkerOverview);
+  </script>
+
 </body>
 </html>

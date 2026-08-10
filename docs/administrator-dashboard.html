@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Administrator · VidiaVille</title>
+  <script src="api.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -90,19 +91,19 @@
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Registered citizens</div>
-          <div class="text-2xl font-bold">48</div>
+          <div class="text-2xl font-bold" id="stat-citizens">—</div>
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Active companies</div>
-          <div class="text-2xl font-bold">12</div>
+          <div class="text-2xl font-bold" id="stat-companies">—</div>
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Pending applications</div>
-          <div class="text-2xl font-bold text-amber-300">3</div>
+          <div class="text-2xl font-bold text-amber-300" id="stat-apps">—</div>
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">City money in motion</div>
-          <div class="text-2xl font-bold font-mono text-vv-green-400">Ꝟ184.2k</div>
+          <div class="text-2xl font-bold font-mono text-vv-green-400" id="stat-money">—</div>
         </div>
       </div>
 
@@ -110,27 +111,13 @@
         <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
           <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-4">Needs attention</h2>
           <ul class="space-y-3 text-sm">
-            <li class="flex justify-between gap-3">
-              <span>Company application · <span class="text-white/70">North Pier Café</span></span>
-              <button type="button" onclick="showAdminPanel('applications')" class="text-xs text-vv-green-400 hover:underline">Review</button>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span>Contract edit proposal · <span class="text-white/70">c_act_1</span></span>
-              <button type="button" onclick="showAdminPanel('contracts')" class="text-xs text-vv-green-400 hover:underline">View</button>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span>Period close due · <span class="text-white/70">Aug 2026</span></span>
-              <button type="button" onclick="showAdminPanel('reports')" class="text-xs text-vv-green-400 hover:underline">Close period</button>
-            </li>
+            <li class="text-white/40" id="needs-attention">Nothing loaded yet.</li>
           </ul>
         </section>
         <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
           <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-4">Recent city activity</h2>
           <ul class="space-y-3 text-sm">
-            <li class="flex justify-between gap-3"><span class="text-white/70">Riverfront Café · sales deposit</span><span class="font-mono text-vv-green-400">+Ꝟ186</span></li>
-            <li class="flex justify-between gap-3"><span class="text-white/70">Vidia Motors · salary run</span><span class="font-mono text-red-400">−Ꝟ4,200</span></li>
-            <li class="flex justify-between gap-3"><span class="text-white/70">Dragon_Destroyer → Vinco transfer</span><span class="font-mono text-red-400">−Ꝟ150</span></li>
-            <li class="flex justify-between gap-3"><span class="text-white/70">Harbor Logistics · contract pay</span><span class="font-mono text-red-400">−Ꝟ800</span></li>
+            <li class="text-white/40" id="recent-activity">Nothing loaded yet.</li>
           </ul>
         </section>
       </div>
@@ -323,81 +310,17 @@
   </footer>
 
   <script>
-    const DB_ENDPOINT = null;
+    // data via VV_WORKER
 
-    const CITIZENS = [
-      { name: 'Dragon_Destroyer', handle: '@dragon_destroyer', balance: 12480, gigs: 3, joined: '12 Mar 2026', flags: '' },
-      { name: 'Vinco', handle: '@vincofoods', balance: 5100, gigs: 2, joined: '18 Mar 2026', flags: '' },
-      { name: 'PotatoQueen', handle: '@potatoqueenv', balance: 3420, gigs: 1, joined: '02 Apr 2026', flags: '' },
-      { name: 'Toaster', handle: '@ihackedurtoaster', balance: 2100, gigs: 1, joined: '22 Apr 2026', flags: '' },
-      { name: 'YellowMan', handle: '@avery_coolball_72994', balance: 890, gigs: 0, joined: '01 Aug 2026', flags: 'New' },
-      { name: 'Dominor', handle: '@vincegamer8576', balance: 15600, gigs: 1, joined: '05 Feb 2026', flags: 'Admin-watch' },
-      { name: 'Alon_Dragon', handle: '@alon_dragon', balance: 7800, gigs: 1, joined: '10 Mar 2026', flags: '' },
-      { name: 'MrIgloo', handle: '@igloothedrummer', balance: 4200, gigs: 2, joined: '15 Apr 2026', flags: '' },
-      { name: 'OzzieBo', handle: '@ozziebo', balance: 1950, gigs: 1, joined: '03 May 2026', flags: '' },
-      { name: 'Wolfdog551', handle: '@wolfdog551', balance: 6300, gigs: 1, joined: '20 Jun 2026', flags: '' },
-      { name: 'Apple', handle: '@eatingapple4950', balance: 1100, gigs: 0, joined: '28 Jul 2026', flags: 'New' },
-      { name: 'Brandino', handle: '@brandoniscol1', balance: 8700, gigs: 2, joined: '08 Feb 2026', flags: '' },
-      { name: 'The Crusher', handle: '@jimtheskeleton_08760', balance: 9900, gigs: 1, joined: '01 Jan 2026', flags: '' },
-      { name: 'cal', handle: '@calgrad7', balance: 3050, gigs: 1, joined: '12 May 2026', flags: '' },
-      { name: 'temporalis', handle: '@mr_stoopid', balance: 4400, gigs: 1, joined: '19 May 2026', flags: '' },
-      { name: 'Idkman29', handle: '@idkwhati9', balance: 2200, gigs: 1, joined: '30 May 2026', flags: '' },
-      { name: 'Rodgas_YT', handle: '@rodgas', balance: 5600, gigs: 2, joined: '04 Jun 2026', flags: '' },
-      { name: 'Chicken', handle: '@xyz_something', balance: 1750, gigs: 1, joined: '11 Jun 2026', flags: '' },
-      { name: 'Dip', handle: '@tatumiscool2011', balance: 2800, gigs: 1, joined: '17 Jun 2026', flags: '' },
-      { name: 'CC', handle: '@cc07369', balance: 3600, gigs: 1, joined: '25 Jun 2026', flags: '' },
-      { name: 'ark765', handle: '@ark765', balance: 4100, gigs: 1, joined: '02 Jul 2026', flags: '' },
-      { name: 'Lye', handle: '@sulyeur_11035', balance: 1500, gigs: 0, joined: '09 Jul 2026', flags: '' },
-      { name: 'maxthebruh', handle: '@maxhebruh', balance: 5250, gigs: 1, joined: '14 Jul 2026', flags: '' },
-      { name: 'zaseder', handle: '@zaseder2', balance: 3900, gigs: 1, joined: '21 Jul 2026', flags: '' },
-      { name: 'Spoingus the III', handle: '@ricky_wells', balance: 6700, gigs: 1, joined: '05 Aug 2026', flags: '' },
-      { name: 'mr.googey', handle: '@mr.googey', balance: 2400, gigs: 1, joined: '08 Aug 2026', flags: '' },
-      { name: 'the_end', handle: '@ship51', balance: 8100, gigs: 2, joined: '11 Aug 2026', flags: '' },
-      { name: 'SazySakeSame', handle: '@sazysakesame', balance: 3300, gigs: 1, joined: '15 Aug 2026', flags: '' },
-      { name: '魁北克', handle: '@nathan912', balance: 4550, gigs: 1, joined: '18 Aug 2026', flags: '' },
-    ];
+    let CITIZENS = [];
 
-    const COMPANIES = [
-      { name: 'Riverfront Café', owner: 'Dragon_Destroyer', balance: 6340, staff: 4, status: 'Active', href: 'owner-overview' },
-      { name: 'Vidia Motors', owner: 'Alon_Dragon_Destroyer', balance: 48200, staff: 14, status: 'Active', href: '#' },
-      { name: 'Harbor Logistics', owner: 'Dominor', balance: 22100, staff: 9, status: 'Active', href: '#' },
-      { name: 'Civic Works Bureau', owner: 'City', balance: 120000, staff: 22, status: 'Active', href: '#' },
-    ];
+    let COMPANIES = [];
 
-    const APPLICATIONS = [
-      {
-        id: 'app_1',
-        name: 'North Pier Café',
-        applicant: 'YellowMan',
-        capital: 2500,
-        message: 'Small café by the pier for morning traffic. Requesting seed capital for equipment.',
-        submitted: '2 days ago',
-      },
-      {
-        id: 'app_2',
-        name: 'Greenline Couriers',
-        applicant: 'Toaster',
-        capital: 1000,
-        message: 'Bike courier collective for same-day parcels across the district.',
-        submitted: '5 days ago',
-      },
-      {
-        id: 'app_3',
-        name: 'Studio Loom',
-        applicant: 'PotatoQueen',
-        capital: 500,
-        message: 'Side craft shop — ceramics and prints. Part-time staffing only.',
-        submitted: '1 week ago',
-      },
-    ];
+    let APPLICATIONS = [];
 
     function exportToDatabase(kind, payload) {
       const record = { kind, payload, at: new Date().toISOString() };
-      const existing = JSON.parse(localStorage.getItem('vv_admin_exports') || '[]');
-      existing.push(record);
-      localStorage.setItem('vv_admin_exports', JSON.stringify(existing));
-      if (DB_ENDPOINT) console.log('[DB]', DB_ENDPOINT, record);
-      else console.log('[DB placeholder]', record);
+      VV_WORKER.post('/admin/events', record);
       return record;
     }
 
@@ -419,12 +342,7 @@
       reports: { key: null, dir: 1 },
     };
 
-    const REPORT_ROWS = [
-      { co: 'Riverfront Café', income: 4200, out: 2980 },
-      { co: 'Vidia Motors', income: 62000, out: 54100 },
-      { co: 'Harbor Logistics', income: 18800, out: 16200 },
-      { co: 'Civic Works Bureau', income: 9000, out: 11200 },
-    ];
+    let REPORT_ROWS = [];
 
     function parseJoined(s) {
       // e.g. "12 Mar 2026"
@@ -581,26 +499,24 @@
     }
 
     function renderContracts() {
-      document.getElementById('admin-active-contracts').innerHTML = `
-        <li class="border border-white/10 rounded-xl px-3 py-2">
-          <a href="contract-overview?id=c_act_1" class="hover:text-vv-green-400 transition">
-            <div class="font-medium">Riverfront Café ↔ PotatoQueen</div>
-            <div class="text-xs text-white/40">Weekend rush · Ꝟ24/h · Active</div>
-          </a>
-        </li>
-        <li class="border border-white/10 rounded-xl px-3 py-2">
-          <div class="font-medium">Harbor Logistics ↔ Civic Works</div>
-          <div class="text-xs text-white/40">Dock coordination · Ꝟ800 completion</div>
-        </li>`;
-      document.getElementById('admin-pending-contracts').innerHTML = `
-        <li class="border border-white/10 rounded-xl px-3 py-2">
-          <div class="font-medium">Outgoing · YellowMan</div>
-          <div class="text-xs text-amber-300/90">Awaiting accept · ~52h left</div>
-        </li>
-        <li class="border border-white/10 rounded-xl px-3 py-2">
-          <div class="font-medium">Edit proposal · c_act_1</div>
-          <div class="text-xs text-white/40">Rate change pending counterparty</div>
-        </li>`;
+      const active = document.getElementById('admin-active-contracts');
+      const pending = document.getElementById('admin-pending-contracts');
+      active.innerHTML = '<li class="text-white/40 text-sm">No active contracts loaded.</li>';
+      pending.innerHTML = '<li class="text-white/40 text-sm">No pending contracts loaded.</li>';
+      VV_WORKER.get('/admin/contracts').then(res => {
+        if (!res.ok || !res.data) return;
+        const a = res.data.active || [];
+        const p = res.data.pending || [];
+        active.innerHTML = a.length ? a.map(c => `<li class="border border-white/10 rounded-xl px-3 py-2">
+          <a href="contract-overview?id=${encodeURIComponent(c.id || '')}" class="hover:text-vv-green-400 transition">
+            <div class="font-medium">${c.label || c.id || ''}</div>
+            <div class="text-xs text-white/40">${c.detail || ''}</div>
+          </a></li>`).join('') : '<li class="text-white/40 text-sm">No active contracts.</li>';
+        pending.innerHTML = p.length ? p.map(c => `<li class="border border-white/10 rounded-xl px-3 py-2">
+          <div class="font-medium">${c.label || c.id || ''}</div>
+          <div class="text-xs text-white/40">${c.detail || ''}</div>
+        </li>`).join('') : '<li class="text-white/40 text-sm">No pending contracts.</li>';
+      });
     }
 
     function renderReports() {
@@ -630,13 +546,46 @@
       renderReports();
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', loadAdminDashboard);
+  </script>
+
+  <script>
+    async function loadAdminDashboard() {
+      if (!VV_WORKER.baseUrl) {
+        renderCitizens();
+        renderCompanies();
+        renderApplications();
+        renderContracts();
+        renderReports();
+        return;
+      }
+      const [cits, cos, apps, reps, stats] = await Promise.all([
+        VV_WORKER.get('/admin/citizens'),
+        VV_WORKER.get('/admin/companies'),
+        VV_WORKER.get('/admin/applications'),
+        VV_WORKER.get('/admin/reports/latest'),
+        VV_WORKER.get('/admin/stats'),
+      ]);
+      if (cits.ok && cits.data && cits.data.items) CITIZENS = cits.data.items;
+      if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
+      if (apps.ok && apps.data && apps.data.items) APPLICATIONS = apps.data.items;
+      if (reps.ok && reps.data && reps.data.items) REPORT_ROWS = reps.data.items;
+      if (stats.ok && stats.data) {
+        const s = stats.data;
+        const el = id => document.getElementById(id);
+        if (el('stat-citizens') && s.citizens != null) el('stat-citizens').textContent = s.citizens;
+        if (el('stat-companies') && s.companies != null) el('stat-companies').textContent = s.companies;
+        if (el('stat-apps') && s.pendingApps != null) el('stat-apps').textContent = s.pendingApps;
+        if (el('stat-money') && s.moneyInMotion != null) el('stat-money').textContent = 'Ꝟ' + s.moneyInMotion;
+      }
       renderCitizens();
       renderCompanies();
       renderApplications();
       renderContracts();
       renderReports();
-    });
+    }
+    document.addEventListener('DOMContentLoaded', loadAdminDashboard);
   </script>
+
 </body>
 </html>

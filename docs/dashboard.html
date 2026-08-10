@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard v2 · VidiaVille</title>
+  <script src="api.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -65,6 +66,9 @@
         <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
       </div>
       <div class="flex items-center gap-3">
+        <a href="administrator-dashboard" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
+           title="Administrator panel">Admin Panel</a>
+
         <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
         <span class="text-sm text-white/70 hidden sm:inline">Dragon_Destroyer</span>
         <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
@@ -97,15 +101,15 @@
         <!-- Profile -->
         <section class="md:col-span-1 bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
           <div class="flex flex-col items-center text-center">
-            <img src="https://cdn.discordapp.com/embed/avatars/2.png"
+            <img id="account-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png"
                  class="w-20 h-20 rounded-full ring-2 ring-vv-green-500/50 object-cover mb-4" alt="" />
-            <h2 class="text-xl font-semibold">Dragon_Destroyer</h2>
-            <p class="text-vv-blue-300 text-sm">@dragon_destroyer</p>
-            <p class="text-white/40 text-xs mt-2">Citizen since 12 Mar 2026</p>
+            <h2 id="account-name" class="text-xl font-semibold text-white/50">—</h2>
+            <p id="account-handle" class="text-vv-blue-300 text-sm">—</p>
+            <p id="account-joined" class="text-white/40 text-xs mt-2"></p>
           </div>
           <div class="mt-6 pt-5 border-t border-white/10 text-center">
             <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Balance</div>
-            <div class="text-3xl font-bold text-vv-green-400 font-mono">Ꝟ12,480.00</div>
+            <div id="account-balance" class="text-3xl font-bold text-vv-green-400 font-mono">—</div>
             <div class="text-xs text-white/30 mt-1">Vidiadollars</div>
           </div>
         </section>
@@ -113,42 +117,8 @@
         <!-- Activity -->
         <section class="md:col-span-2 bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
           <h3 class="text-sm font-medium text-white/60 mb-4">Recent income &amp; expenses</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
-              <div>
-                <div class="text-sm">Salary — Vidia Motors</div>
-                <div class="text-xs text-white/40">2 days ago</div>
-              </div>
-              <span class="text-vv-green-400 font-mono text-sm">+Ꝟ1,200.00</span>
-            </div>
-            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
-              <div>
-                <div class="text-sm">Rent — Civic Housing</div>
-                <div class="text-xs text-white/40">3 days ago</div>
-              </div>
-              <span class="text-red-400 font-mono text-sm">−Ꝟ800.00</span>
-            </div>
-            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
-              <div>
-                <div class="text-sm">Gig — Harbor Logistics</div>
-                <div class="text-xs text-white/40">5 days ago</div>
-              </div>
-              <span class="text-vv-green-400 font-mono text-sm">+Ꝟ450.00</span>
-            </div>
-            <div class="flex justify-between items-center py-2.5 border-b border-white/5">
-              <div>
-                <div class="text-sm">Fuel — Downtown Garage</div>
-                <div class="text-xs text-white/40">4 days ago</div>
-              </div>
-              <span class="text-red-400 font-mono text-sm">−Ꝟ62.50</span>
-            </div>
-            <div class="flex justify-between items-center py-2.5">
-              <div>
-                <div class="text-sm">Transfer to Vinco</div>
-                <div class="text-xs text-white/40">6 days ago</div>
-              </div>
-              <span class="text-red-400 font-mono text-sm">−Ꝟ150.00</span>
-            </div>
+          <div id="account-activity" class="space-y-3 text-sm text-white/40">
+            Loading activity…
           </div>
         </section>
       </div>
@@ -172,34 +142,8 @@
         <!-- Your gigs -->
         <div>
           <h3 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Your current gigs</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <a href="worker-overview" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
-              <div class="flex justify-between items-start">
-                <div>
-                  <div class="font-medium">Vidia Motors</div>
-                  <div class="text-sm text-white/50">Sales Associate</div>
-                </div>
-                <span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>
-              </div>
-            </a>
-            <a href="#" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
-              <div class="flex justify-between items-start">
-                <div>
-                  <div class="font-medium">Harbor Logistics</div>
-                  <div class="text-sm text-white/50">Dock Worker</div>
-                </div>
-                <span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>
-              </div>
-            </a>
-            <a href="owner-overview" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition sm:col-span-2">
-              <div class="flex justify-between items-start">
-                <div>
-                  <div class="font-medium">Riverfront Café</div>
-                  <div class="text-sm text-white/50">Owner</div>
-                </div>
-                <span class="text-xs text-vv-blue-300 bg-vv-blue-500/15 px-2 py-0.5 rounded-full">Owner</span>
-              </div>
-            </a>
+          <div id="gigs-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-white/40">
+            Loading gigs…
           </div>
         </div>
 
@@ -403,7 +347,7 @@
         </section>
 
         <p class="mt-4 text-center text-xs text-white/30">
-          Your current balance: <span class="text-vv-green-400 font-mono">Ꝟ12,480.00</span>
+          Your current balance: <span id="pay-balance" class="text-vv-green-400 font-mono">—</span>
         </p>
       </div>
     </div>
@@ -414,9 +358,7 @@
   </footer>
 
   <script>
-    const citizens = [
-      "Dragon_Destroyer", "Vinco", "魁北克", "cal", "temporalis", "YellowMan", "PotatoQueen", "Idkman29", "Dominor", "Rodgas_YT", "Alon_Dragon", "Chicken", "Dip", "mr.googey", "CC", "Toaster", "the_end", "MrIgloo", "OzzieBo", "ark765", "SazySakeSame", "Lye", "maxthebruh", "Spoingus the III", "The Crusher", "zaseder", "Brandino", "Wolfdog551", "Apple"
-    ];
+    let citizens = [];
 
     let coOwners = [];
     let jobIdCounter = 0;
@@ -521,7 +463,7 @@
       // UI-only for now — later: POST to /api/company-draft
       const data = collectCompanyForm();
       try {
-        localStorage.setItem('vv_company_draft', JSON.stringify(data));
+        VV_WORKER.post('/companies/drafts', data);
       } catch (e) {}
       alert('Application saved as a draft. You can come back and edit it later.');
     }
@@ -830,5 +772,107 @@
       }
     });
   </script>
+
+  <script>
+    // Admin panel access — only these citizens see the header control
+    window.VV_ADMIN_PANEL_ACCESS = ['Dragon_Destroyer', 'Apple'];
+    window.VV_CURRENT_USER = window.VV_CURRENT_USER || 'Dragon_Destroyer';
+    (function showAdminPanelButton() {
+      const btn = document.getElementById('admin-panel-btn');
+      if (!btn) return;
+      const allowed = window.VV_ADMIN_PANEL_ACCESS.map(n => n.toLowerCase());
+      if (allowed.includes(String(window.VV_CURRENT_USER).toLowerCase())) {
+        btn.classList.remove('hidden');
+      }
+    })();
+  </script>
+
+
+  <script>
+    function money(n) {
+      if (n == null || n === '') return '—';
+      const sign = n < 0 ? '−' : '';
+      return sign + 'Ꝟ' + Math.abs(Number(n)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    async function loadDashboard() {
+      const me = await VV_WORKER.get('/me');
+      const nameEl = document.getElementById('account-name');
+      if (!VV_WORKER.baseUrl) {
+        nameEl.textContent = 'Not connected';
+        document.getElementById('account-handle').textContent = 'Worker endpoint not configured';
+        document.getElementById('account-balance').textContent = '—';
+        document.getElementById('account-activity').textContent = 'Connect VV_WORKER.baseUrl to load activity.';
+        document.getElementById('gigs-list').textContent = 'No gigs loaded.';
+        const op = document.getElementById('open-positions-body');
+        if (op) op.textContent = 'No open positions loaded.';
+        return;
+      }
+      if (me.ok && me.data) {
+        const u = me.data;
+        nameEl.textContent = u.displayName || u.name || '—';
+        document.getElementById('account-handle').textContent = u.handle ? '@' + u.handle.replace(/^@/, '') : '';
+        document.getElementById('account-joined').textContent = u.joined ? 'Citizen since ' + u.joined : '';
+        if (u.avatar) document.getElementById('account-avatar').src = u.avatar;
+        document.getElementById('account-balance').textContent = money(u.balance);
+        const pb = document.getElementById('pay-balance');
+        if (pb) pb.textContent = money(u.balance);
+        if (u.displayName) window.VV_CURRENT_USER = u.displayName;
+      }
+
+      const act = await VV_WORKER.get('/me/activity');
+      const actEl = document.getElementById('account-activity');
+      const items = (act.ok && act.data && act.data.items) ? act.data.items : [];
+      actEl.innerHTML = items.length ? items.map(i => `
+        <div class="flex justify-between items-center py-2.5 border-b border-white/5 last:border-0">
+          <div>
+            <div class="text-sm text-white">${i.label || ''}</div>
+            <div class="text-xs text-white/40">${i.when || ''}</div>
+          </div>
+          <span class="font-mono text-sm ${Number(i.amount) >= 0 ? 'text-vv-green-400' : 'text-red-400'}">${Number(i.amount) >= 0 ? '+' : ''}${money(i.amount)}</span>
+        </div>
+      `).join('') : '<p class="text-white/40">No recent activity.</p>';
+
+      const gigs = await VV_WORKER.get('/me/gigs');
+      const gigsEl = document.getElementById('gigs-list');
+      const glist = (gigs.ok && gigs.data && gigs.data.items) ? gigs.data.items : [];
+      gigsEl.innerHTML = glist.length ? glist.map(g => {
+        const href = g.role === 'Owner' ? 'owner-overview?id=' + encodeURIComponent(g.companyId || '')
+          : 'worker-overview?id=' + encodeURIComponent(g.companyId || '');
+        const badge = g.role === 'Owner'
+          ? '<span class="text-xs text-vv-blue-300 bg-vv-blue-500/15 px-2 py-0.5 rounded-full">Owner</span>'
+          : '<span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>';
+        return `<a href="${href}" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
+          <div class="flex justify-between items-start"><div>
+            <div class="font-medium text-white">${g.companyName || ''}</div>
+            <div class="text-sm text-white/50">${g.role || ''}</div>
+          </div>${badge}</div></a>`;
+      }).join('') : '<p class="text-white/40">You are not part of any company yet.</p>';
+
+      const open = await VV_WORKER.get('/positions/open');
+      const op = document.getElementById('open-positions-body');
+      const plist = (open.ok && open.data && open.data.items) ? open.data.items : [];
+      if (op) {
+        if (!plist.length) {
+          op.outerHTML = '<tr><td colspan="4" class="px-4 py-6 text-white/40 text-center">No open positions.</td></tr>';
+        } else {
+          op.outerHTML = plist.map(p => `<tr class="hover:bg-white/[0.02]">
+            <td class="px-4 py-3">${p.companyName || ''}</td>
+            <td class="px-4 py-3">${p.title || ''}</td>
+            <td class="px-4 py-3 font-mono text-vv-green-400">${p.rate != null ? money(p.rate) + ' / hr' : '—'}</td>
+            <td class="px-4 py-3 text-right"><button type="button" class="text-xs text-vv-green-400 hover:underline">Apply</button></td>
+          </tr>`).join('');
+        }
+      }
+
+      const cit = await VV_WORKER.get('/citizens');
+      if (cit.ok && cit.data && Array.isArray(cit.data.items)) {
+        citizens = cit.data.items.map(c => c.displayName || c.name).filter(Boolean);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+  </script>
+
 </body>
 </html>

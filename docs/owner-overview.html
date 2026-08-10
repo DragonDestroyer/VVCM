@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riverfront Café · VidiaVille</title>
+  <script src="api.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -71,6 +72,9 @@
         <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
       </a>
       <div class="flex items-center gap-3">
+        <a href="administrator-dashboard" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
+           title="Administrator panel">Admin Panel</a>
+
         <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
         <span class="text-sm text-white/70 hidden sm:inline">Dragon_Destroyer</span>
         <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
@@ -105,7 +109,7 @@
         </div>
         <div class="sm:text-right shrink-0 bg-vv-blue-950/50 border border-white/5 rounded-xl px-5 py-4">
           <div class="text-xs text-white/40 uppercase tracking-wider">Company balance</div>
-          <div class="text-2xl font-bold text-vv-green-400 font-mono mt-0.5" id="company-balance">Ꝟ6,340.00</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono mt-0.5" id="company-balance">—</div>
           <div class="text-xs text-white/30">Vidiadollars</div>
         </div>
       </div>
@@ -587,14 +591,10 @@
 
   <script>
     /* ---------- Company context (would come from DB) ---------- */
-    const COMPANY = {
-      id: 'co_riverfront_01',
-      name: 'Riverfront Café',
-      balance: 6340.00,
-    };
+    let COMPANY = { id: null, name: '—', balance: 0 };
 
     // Placeholder destination for future database / API
-    const DB_ENDPOINT = null; // e.g. 'https://api.example.com/v1/transactions'
+    const DB_ENDPOINT = null; // use VV_WORKER.baseUrl
 
     /* ---------- Sample movement history (would come from DB) ---------- */
     // amounts: positive = income, negative = outflow
@@ -1026,23 +1026,13 @@
     /** Export payload somewhere later — localStorage + console for now */
     function exportToDatabase(kind, payload) {
       const record = {
-        companyId: COMPANY.id,
         kind,
+        companyId: COMPANY.id,
+        companyName: COMPANY.name,
         payload,
         at: new Date().toISOString(),
       };
-      // local staging
-      const key = 'vv_company_exports_' + COMPANY.id;
-      const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      existing.push(record);
-      localStorage.setItem(key, JSON.stringify(existing));
-
-      if (DB_ENDPOINT) {
-        // fetch(DB_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) })
-        console.log('[DB] would POST to', DB_ENDPOINT, record);
-      } else {
-        console.log('[DB placeholder] staged export:', record);
-      }
+      VV_WORKER.post('/exports', record);
       return record;
     }
 
@@ -1127,58 +1117,16 @@
     }
 
     /* ---------- Contracts ---------- */
-    const CONTRACT_CITIZENS = [
-      'Dragon_Destroyer', 'Vinco', '魁北克', 'cal', 'temporalis', 'YellowMan', 'PotatoQueen', 'Idkman29', 'Dominor', 'Rodgas_YT', 'Alon_Dragon', 'Chicken', 'Dip', 'mr.googey', 'CC', 'Toaster', 'the_end', 'MrIgloo', 'OzzieBo', 'ark765', 'SazySakeSame', 'Lye', 'maxthebruh', 'Spoingus the III', 'The Crusher', 'zaseder', 'Brandino', 'Wolfdog551', 'Apple'
-    ];
-    const CONTRACT_COMPANIES = [
-      'Vidia Motors', 'Harbor Logistics', 'North Pier Shipping', 'Civic Works Bureau',
-    ];
+    let CONTRACT_CITIZENS = [];
+    let CONTRACT_COMPANIES = [];
 
     let contractTargetType = 'resident';
     let contractPayType = 'hourly';
 
     // Sample pending / active (UI demo — later from DB)
-    let pendingOutgoing = [
-      {
-        id: 'c_out_1',
-        targetType: 'resident',
-        target: 'YellowMan',
-        payType: 'hourly',
-        rate: 22,
-        duration: 14,
-        unit: 'days',
-        description: 'Event catering support for harvest weekend.',
-        sentAt: Date.now() - 20 * 3600 * 1000,
-        expiresAt: Date.now() + 52 * 3600 * 1000,
-      },
-    ];
-    let pendingIncoming = [
-      {
-        id: 'c_in_1',
-        from: 'Harbor Logistics',
-        fromType: 'company',
-        payType: 'completion',
-        total: 800,
-        duration: 3,
-        unit: 'days',
-        description: 'Supply drop coordination at the riverside dock.',
-        sentAt: Date.now() - 10 * 3600 * 1000,
-        expiresAt: Date.now() + 62 * 3600 * 1000,
-      },
-    ];
-    let activeContracts = [
-      {
-        id: 'c_act_1',
-        with: 'PotatoQueen',
-        withType: 'resident',
-        payType: 'hourly',
-        rate: 24,
-        duration: 1,
-        unit: 'months',
-        description: 'Weekend rush barista coverage (special project rate).',
-        startedAt: Date.now() - 5 * 24 * 3600 * 1000,
-      },
-    ];
+    let pendingOutgoing = [];
+    let pendingIncoming = [];
+    let activeContracts = [];
 
     function showContractView(which) {
       document.getElementById('contract-create').classList.add('hidden');
@@ -1384,5 +1332,57 @@
       setPayType('hourly');
     });
   </script>
+
+  <script>
+    // Admin panel access — only these citizens see the header control
+    window.VV_ADMIN_PANEL_ACCESS = ['Dragon_Destroyer', 'Apple'];
+    window.VV_CURRENT_USER = window.VV_CURRENT_USER || 'Dragon_Destroyer';
+    (function showAdminPanelButton() {
+      const btn = document.getElementById('admin-panel-btn');
+      if (!btn) return;
+      const allowed = window.VV_ADMIN_PANEL_ACCESS.map(n => n.toLowerCase());
+      if (allowed.includes(String(window.VV_CURRENT_USER).toLowerCase())) {
+        btn.classList.remove('hidden');
+      }
+    })();
+  </script>
+
+
+  <script>
+    async function loadOwnerOverview() {
+      const params = new URLSearchParams(location.search);
+      const id = params.get('id') || '';
+      const path = id ? '/companies/' + encodeURIComponent(id) : '/companies/mine/owner';
+      const res = await VV_WORKER.get(path);
+      if (!VV_WORKER.baseUrl) {
+        const h = document.querySelector('h1');
+        if (h) h.textContent = 'Company (worker offline)';
+        return;
+      }
+      if (res.ok && res.data) {
+        COMPANY = res.data;
+        const h = document.querySelector('h1');
+        if (h && COMPANY.name) h.textContent = COMPANY.name;
+        const bal = document.getElementById('company-balance');
+        if (bal) bal.textContent = 'Ꝟ' + Number(COMPANY.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+      }
+      const contracts = await VV_WORKER.get('/companies/' + encodeURIComponent(COMPANY.id || id) + '/contracts');
+      if (contracts.ok && contracts.data) {
+        pendingOutgoing = contracts.data.outgoing || [];
+        pendingIncoming = contracts.data.incoming || [];
+        activeContracts = contracts.data.active || [];
+      }
+      const cit = await VV_WORKER.get('/citizens');
+      if (cit.ok && cit.data && cit.data.items) {
+        CONTRACT_CITIZENS = cit.data.items.map(c => c.displayName || c.name);
+      }
+      const cos = await VV_WORKER.get('/companies');
+      if (cos.ok && cos.data && cos.data.items) {
+        CONTRACT_COMPANIES = cos.data.items.map(c => c.name);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', () => { loadOwnerOverview(); });
+  </script>
+
 </body>
 </html>
