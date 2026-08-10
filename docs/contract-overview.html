@@ -59,7 +59,7 @@
       </a>
       <div class="flex items-center gap-3">
         <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
-        <span class="text-sm text-white/70 hidden sm:inline">Dragon</span>
+        <span class="text-sm text-white/70 hidden sm:inline">Dragon_Destroyer</span>
         <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
       </div>
     </div>
@@ -92,7 +92,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <div>
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Counterparty</div>
-          <div id="c-with" class="font-medium">Maya Chen</div>
+          <div id="c-with" class="font-medium">PotatoQueen</div>
           <div id="c-with-type" class="text-xs text-white/35">Citizen</div>
         </div>
         <div>
@@ -117,9 +117,9 @@
       <div class="mt-4">
         <div class="text-xs text-white/40 uppercase tracking-wider mb-2">Access list</div>
         <div id="c-access" class="flex flex-wrap gap-2 text-xs">
-          <span class="bg-vv-blue-950/60 border border-white/10 rounded-full px-3 py-1">Dragon <span class="text-white/30">owner</span></span>
-          <span class="bg-vv-blue-950/60 border border-white/10 rounded-full px-3 py-1">Jordan Ortiz <span class="text-white/30">shift lead</span></span>
-          <span class="bg-vv-blue-950/60 border border-white/10 rounded-full px-3 py-1">Maya Chen <span class="text-white/30">contractor</span></span>
+          <span class="bg-vv-blue-950/60 border border-white/10 rounded-full px-3 py-1">Dragon_Destroyer <span class="text-white/30">owner</span></span>
+          <span class="bg-vv-blue-950/60 border border-white/10 rounded-full px-3 py-1">Vinco <span class="text-white/30">shift lead</span></span>
+          <span class="bg-vv-blue-950/60 border border-white/10 rounded-full px-3 py-1">PotatoQueen <span class="text-white/30">contractor</span></span>
         </div>
       </div>
 
@@ -198,28 +198,28 @@
     const CONTRACT = {
       id: 'c_act_1',
       title: 'Weekend rush coverage',
-      with: 'Maya Chen',
+      with: 'PotatoQueen',
       withType: 'Citizen',
       pay: 'Ꝟ24 / h',
       length: '1 month',
       started: 'Aug 4, 2026',
       description: 'Weekend rush barista coverage (special project rate).',
       access: [
-        { name: 'Dragon', role: 'owner' },
-        { name: 'Jordan Ortiz', role: 'shift lead' },
-        { name: 'Maya Chen', role: 'contractor' },
+        { name: 'Dragon_Destroyer', role: 'owner' },
+        { name: 'Vinco', role: 'shift lead' },
+        { name: 'PotatoQueen', role: 'contractor' },
       ],
     };
 
     const chats = {
       general: [
-        { who: 'Jordan Ortiz', at: 'Yesterday 18:10', text: 'Shift board is up for Fri–Sun. Maya you are on open Saturday.' },
-        { who: 'Maya Chen', at: 'Yesterday 18:22', text: 'Got it — I’ll be there at 07:30.' },
-        { who: 'Dragon', at: 'Today 09:05', text: 'Project rate is still +Ꝟ4 through Sunday night.' },
+        { who: 'Vinco', at: 'Yesterday 18:10', text: 'Shift board is up for Fri–Sun. Maya you are on open Saturday.' },
+        { who: 'PotatoQueen', at: 'Yesterday 18:22', text: 'Got it — I’ll be there at 07:30.' },
+        { who: 'Dragon_Destroyer', at: 'Today 09:05', text: 'Project rate is still +Ꝟ4 through Sunday night.' },
       ],
       owners: [
-        { who: 'Dragon', at: 'Aug 4 11:00', text: 'Contract live. Rate locked at Ꝟ24 for the project window.' },
-        { who: 'Maya Chen', at: 'Aug 4 11:15', text: 'Confirmed on my side. Thanks.' },
+        { who: 'Dragon_Destroyer', at: 'Aug 4 11:00', text: 'Contract live. Rate locked at Ꝟ24 for the project window.' },
+        { who: 'PotatoQueen', at: 'Aug 4 11:15', text: 'Confirmed on my side. Thanks.' },
       ],
     };
 
@@ -287,7 +287,7 @@
       if (!text) return false;
       const now = new Date();
       const at = now.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      chats[room].push({ who: 'Dragon', at, text });
+      chats[room].push({ who: 'Dragon_Destroyer', at, text });
       exportToDatabase('chat_message', { room, text });
       input.value = '';
       renderChat(room);

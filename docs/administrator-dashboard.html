@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administrator · VidiaVille</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            vv: {
+              blue: {
+                950: '#020617', 900: '#0a1628', 800: '#0f2744', 700: '#163a5f',
+                500: '#1d6fb8', 400: '#3b8fd4', 300: '#6bb0e8',
+              },
+              green: {
+                600: '#059669', 500: '#10b981', 400: '#34d399', 300: '#6ee7b7',
+              }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .vv-bg {
+      background:
+        radial-gradient(ellipse 70% 40% at 50% -10%, rgba(29,111,184,0.20), transparent),
+        radial-gradient(ellipse 50% 30% at 80% 110%, rgba(16,185,129,0.10), transparent),
+        #020617;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .tab-btn.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+    .vv-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(16, 185, 129, 0.45) rgba(15, 39, 68, 0.8);
+    }
+    .vv-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .vv-scroll::-webkit-scrollbar-track { background: rgba(15, 39, 68, 0.6); border-radius: 999px; }
+    .vv-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(29, 111, 184, 0.7), rgba(16, 185, 129, 0.55));
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="vv-bg text-white min-h-full">
+
+  <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="index.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
+        <span class="text-white">VidiaVille</span>
+        <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span class="text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">Administrator</span>
+        <img src="https://cdn.discordapp.com/embed/avatars/0.png" class="w-8 h-8 rounded-full ring-1 ring-amber-400/40" alt="" />
+        <span class="text-sm text-white/70 hidden sm:inline">Admin</span>
+        <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold tracking-tight">Civic administration</h1>
+      <p class="text-sm text-white/45 mt-1">Full ledger access — citizens, companies, contracts, and period reports.</p>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-8">
+      <button type="button" onclick="showAdminPanel('overview')" id="tab-overview" class="tab-btn active py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Overview</button>
+      <button type="button" onclick="showAdminPanel('citizens')" id="tab-citizens" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Citizens</button>
+      <button type="button" onclick="showAdminPanel('companies')" id="tab-companies" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Companies</button>
+      <button type="button" onclick="showAdminPanel('applications')" id="tab-applications" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Applications</button>
+      <button type="button" onclick="showAdminPanel('contracts')" id="tab-contracts" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Contracts</button>
+      <button type="button" onclick="showAdminPanel('reports')" id="tab-reports" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Tax periods</button>
+    </nav>
+
+    <!-- ========== OVERVIEW ========== -->
+    <div id="panel-overview" class="panel active space-y-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Registered citizens</div>
+          <div class="text-2xl font-bold">48</div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Active companies</div>
+          <div class="text-2xl font-bold">12</div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Pending applications</div>
+          <div class="text-2xl font-bold text-amber-300">3</div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">City money in motion</div>
+          <div class="text-2xl font-bold font-mono text-vv-green-400">Ꝟ184.2k</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
+          <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-4">Needs attention</h2>
+          <ul class="space-y-3 text-sm">
+            <li class="flex justify-between gap-3">
+              <span>Company application · <span class="text-white/70">North Pier Café</span></span>
+              <button type="button" onclick="showAdminPanel('applications')" class="text-xs text-vv-green-400 hover:underline">Review</button>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span>Contract edit proposal · <span class="text-white/70">c_act_1</span></span>
+              <button type="button" onclick="showAdminPanel('contracts')" class="text-xs text-vv-green-400 hover:underline">View</button>
+            </li>
+            <li class="flex justify-between gap-3">
+              <span>Period close due · <span class="text-white/70">Aug 2026</span></span>
+              <button type="button" onclick="showAdminPanel('reports')" class="text-xs text-vv-green-400 hover:underline">Close period</button>
+            </li>
+          </ul>
+        </section>
+        <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
+          <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-4">Recent city activity</h2>
+          <ul class="space-y-3 text-sm">
+            <li class="flex justify-between gap-3"><span class="text-white/70">Riverfront Café · sales deposit</span><span class="font-mono text-vv-green-400">+Ꝟ186</span></li>
+            <li class="flex justify-between gap-3"><span class="text-white/70">Vidia Motors · salary run</span><span class="font-mono text-red-400">−Ꝟ4,200</span></li>
+            <li class="flex justify-between gap-3"><span class="text-white/70">Dragon_Destroyer → Vinco transfer</span><span class="font-mono text-red-400">−Ꝟ150</span></li>
+            <li class="flex justify-between gap-3"><span class="text-white/70">Harbor Logistics · contract pay</span><span class="font-mono text-red-400">−Ꝟ800</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        <a href="dashboard" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Open citizen dashboard</a>
+        <a href="owner-overview" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Sample owner view</a>
+        <a href="worker-overview" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Sample worker view</a>
+      </div>
+    </div>
+
+    <!-- ========== CITIZENS ========== -->
+    <div id="panel-citizens" class="panel space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">All citizens</h2>
+        <div class="flex gap-2">
+          <input type="search" id="citizen-search" oninput="filterCitizens()" placeholder="Search citizens…"
+                 class="bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          <button type="button" onclick="promptAdjustBalance()"
+                  class="text-sm bg-vv-green-500/15 text-vv-green-400 border border-vv-green-500/30 px-3 py-2 rounded-xl hover:bg-vv-green-500/25 transition">
+            Adjust balance
+          </button>
+        </div>
+      </div>
+      <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto vv-scroll">
+          <table class="w-full text-sm">
+            <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+              <tr>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="citizens" data-key="name" onclick="sortTable(this)">
+                    Citizen <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="citizens" data-key="balance" onclick="sortTable(this)">
+                    Balance <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="citizens" data-key="gigs" onclick="sortTable(this)">
+                    Gigs <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="citizens" data-key="joined" onclick="sortTable(this)">
+                    Joined <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="citizens" data-key="flags" onclick="sortTable(this)">
+                    Flags <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="citizens-tbody" class="divide-y divide-white/5"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== COMPANIES ========== -->
+    <div id="panel-companies" class="panel space-y-4">
+      <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Registered companies</h2>
+      <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto vv-scroll">
+          <table class="w-full text-sm">
+            <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+              <tr>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="companies" data-key="name" onclick="sortTable(this)">
+                    Company <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="companies" data-key="owner" onclick="sortTable(this)">
+                    Owner <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="companies" data-key="balance" onclick="sortTable(this)">
+                    Balance <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="companies" data-key="staff" onclick="sortTable(this)">
+                    Staff <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="companies" data-key="status" onclick="sortTable(this)">
+                    Status <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody id="companies-tbody" class="divide-y divide-white/5"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== APPLICATIONS ========== -->
+    <div id="panel-applications" class="panel space-y-4">
+      <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Company applications</h2>
+      <p class="text-sm text-white/40">Approve to register the company and sanction starting capital.</p>
+      <div id="applications-list" class="space-y-4"></div>
+    </div>
+
+    <!-- ========== CONTRACTS ========== -->
+    <div id="panel-contracts" class="panel space-y-4">
+      <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">City-wide contracts</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
+          <h3 class="text-xs text-white/40 uppercase tracking-wider mb-3">Active</h3>
+          <ul id="admin-active-contracts" class="space-y-2 text-sm"></ul>
+        </section>
+        <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
+          <h3 class="text-xs text-white/40 uppercase tracking-wider mb-3">Pending / edit proposals</h3>
+          <ul id="admin-pending-contracts" class="space-y-2 text-sm"></ul>
+        </section>
+      </div>
+    </div>
+
+    <!-- ========== TAX PERIODS ========== -->
+    <div id="panel-reports" class="panel space-y-6">
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-1">Close civic period</h2>
+        <p class="text-sm text-white/45 mb-4">Generates a tax report for every company covering transfers and income in the window. Owners see their own; you see all.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Period start</label>
+            <input type="date" id="period-start" value="2026-08-01"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Period end</label>
+            <input type="date" id="period-end" value="2026-08-31"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+          <div class="flex items-end">
+            <button type="button" onclick="closeTaxPeriod()"
+                    class="w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2.5 rounded-xl transition">
+              Close period &amp; generate reports
+            </button>
+          </div>
+        </div>
+        <p id="period-status" class="text-sm text-vv-green-400 hidden"></p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">All company reports (latest period)</h2>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+              <tr>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="reports" data-key="co" onclick="sortTable(this)">
+                    Company <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="reports" data-key="income" onclick="sortTable(this)">
+                    Income <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="reports" data-key="out" onclick="sortTable(this)">
+                    Outflow <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+                <th class="px-4 py-3 font-medium">
+                  <button type="button" class="sort-btn inline-flex items-center gap-1 hover:text-vv-green-400 transition" data-table="reports" data-key="net" onclick="sortTable(this)">
+                    Net <span class="sort-ind text-[10px] opacity-40">↕</span>
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="reports-tbody" class="divide-y divide-white/5"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="py-8 text-center text-white/20 text-xs tracking-wider">
+    VidiaVille Currency Manager · Administrator · Launch v0.1
+  </footer>
+
+  <script>
+    const DB_ENDPOINT = null;
+
+    const CITIZENS = [
+      { name: 'Dragon_Destroyer', handle: '@dragon_destroyer', balance: 12480, gigs: 3, joined: '12 Mar 2026', flags: '' },
+      { name: 'Vinco', handle: '@vincofoods', balance: 5100, gigs: 2, joined: '18 Mar 2026', flags: '' },
+      { name: 'PotatoQueen', handle: '@potatoqueenv', balance: 3420, gigs: 1, joined: '02 Apr 2026', flags: '' },
+      { name: 'Toaster', handle: '@ihackedurtoaster', balance: 2100, gigs: 1, joined: '22 Apr 2026', flags: '' },
+      { name: 'YellowMan', handle: '@avery_coolball_72994', balance: 890, gigs: 0, joined: '01 Aug 2026', flags: 'New' },
+      { name: 'Dominor', handle: '@vincegamer8576', balance: 15600, gigs: 1, joined: '05 Feb 2026', flags: 'Admin-watch' },
+      { name: 'Alon_Dragon', handle: '@alon_dragon', balance: 7800, gigs: 1, joined: '10 Mar 2026', flags: '' },
+      { name: 'MrIgloo', handle: '@igloothedrummer', balance: 4200, gigs: 2, joined: '15 Apr 2026', flags: '' },
+      { name: 'OzzieBo', handle: '@ozziebo', balance: 1950, gigs: 1, joined: '03 May 2026', flags: '' },
+      { name: 'Wolfdog551', handle: '@wolfdog551', balance: 6300, gigs: 1, joined: '20 Jun 2026', flags: '' },
+      { name: 'Apple', handle: '@eatingapple4950', balance: 1100, gigs: 0, joined: '28 Jul 2026', flags: 'New' },
+      { name: 'Brandino', handle: '@brandoniscol1', balance: 8700, gigs: 2, joined: '08 Feb 2026', flags: '' },
+      { name: 'The Crusher', handle: '@jimtheskeleton_08760', balance: 9900, gigs: 1, joined: '01 Jan 2026', flags: '' },
+      { name: 'cal', handle: '@calgrad7', balance: 3050, gigs: 1, joined: '12 May 2026', flags: '' },
+      { name: 'temporalis', handle: '@mr_stoopid', balance: 4400, gigs: 1, joined: '19 May 2026', flags: '' },
+      { name: 'Idkman29', handle: '@idkwhati9', balance: 2200, gigs: 1, joined: '30 May 2026', flags: '' },
+      { name: 'Rodgas_YT', handle: '@rodgas', balance: 5600, gigs: 2, joined: '04 Jun 2026', flags: '' },
+      { name: 'Chicken', handle: '@xyz_something', balance: 1750, gigs: 1, joined: '11 Jun 2026', flags: '' },
+      { name: 'Dip', handle: '@tatumiscool2011', balance: 2800, gigs: 1, joined: '17 Jun 2026', flags: '' },
+      { name: 'CC', handle: '@cc07369', balance: 3600, gigs: 1, joined: '25 Jun 2026', flags: '' },
+      { name: 'ark765', handle: '@ark765', balance: 4100, gigs: 1, joined: '02 Jul 2026', flags: '' },
+      { name: 'Lye', handle: '@sulyeur_11035', balance: 1500, gigs: 0, joined: '09 Jul 2026', flags: '' },
+      { name: 'maxthebruh', handle: '@maxhebruh', balance: 5250, gigs: 1, joined: '14 Jul 2026', flags: '' },
+      { name: 'zaseder', handle: '@zaseder2', balance: 3900, gigs: 1, joined: '21 Jul 2026', flags: '' },
+      { name: 'Spoingus the III', handle: '@ricky_wells', balance: 6700, gigs: 1, joined: '05 Aug 2026', flags: '' },
+      { name: 'mr.googey', handle: '@mr.googey', balance: 2400, gigs: 1, joined: '08 Aug 2026', flags: '' },
+      { name: 'the_end', handle: '@ship51', balance: 8100, gigs: 2, joined: '11 Aug 2026', flags: '' },
+      { name: 'SazySakeSame', handle: '@sazysakesame', balance: 3300, gigs: 1, joined: '15 Aug 2026', flags: '' },
+      { name: '魁北克', handle: '@nathan912', balance: 4550, gigs: 1, joined: '18 Aug 2026', flags: '' },
+    ];
+
+    const COMPANIES = [
+      { name: 'Riverfront Café', owner: 'Dragon_Destroyer', balance: 6340, staff: 4, status: 'Active', href: 'owner-overview' },
+      { name: 'Vidia Motors', owner: 'Alon_Dragon_Destroyer', balance: 48200, staff: 14, status: 'Active', href: '#' },
+      { name: 'Harbor Logistics', owner: 'Dominor', balance: 22100, staff: 9, status: 'Active', href: '#' },
+      { name: 'Civic Works Bureau', owner: 'City', balance: 120000, staff: 22, status: 'Active', href: '#' },
+    ];
+
+    const APPLICATIONS = [
+      {
+        id: 'app_1',
+        name: 'North Pier Café',
+        applicant: 'YellowMan',
+        capital: 2500,
+        message: 'Small café by the pier for morning traffic. Requesting seed capital for equipment.',
+        submitted: '2 days ago',
+      },
+      {
+        id: 'app_2',
+        name: 'Greenline Couriers',
+        applicant: 'Toaster',
+        capital: 1000,
+        message: 'Bike courier collective for same-day parcels across the district.',
+        submitted: '5 days ago',
+      },
+      {
+        id: 'app_3',
+        name: 'Studio Loom',
+        applicant: 'PotatoQueen',
+        capital: 500,
+        message: 'Side craft shop — ceramics and prints. Part-time staffing only.',
+        submitted: '1 week ago',
+      },
+    ];
+
+    function exportToDatabase(kind, payload) {
+      const record = { kind, payload, at: new Date().toISOString() };
+      const existing = JSON.parse(localStorage.getItem('vv_admin_exports') || '[]');
+      existing.push(record);
+      localStorage.setItem('vv_admin_exports', JSON.stringify(existing));
+      if (DB_ENDPOINT) console.log('[DB]', DB_ENDPOINT, record);
+      else console.log('[DB placeholder]', record);
+      return record;
+    }
+
+    function showAdminPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    function money(n) {
+      const sign = n < 0 ? '−' : '';
+      return sign + 'Ꝟ' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+    }
+
+    const sortState = {
+      citizens: { key: null, dir: 1 },
+      companies: { key: null, dir: 1 },
+      reports: { key: null, dir: 1 },
+    };
+
+    const REPORT_ROWS = [
+      { co: 'Riverfront Café', income: 4200, out: 2980 },
+      { co: 'Vidia Motors', income: 62000, out: 54100 },
+      { co: 'Harbor Logistics', income: 18800, out: 16200 },
+      { co: 'Civic Works Bureau', income: 9000, out: 11200 },
+    ];
+
+    function parseJoined(s) {
+      // e.g. "12 Mar 2026"
+      const t = Date.parse(s);
+      return isNaN(t) ? 0 : t;
+    }
+
+    function sortTable(btn) {
+      const table = btn.dataset.table;
+      const key = btn.dataset.key;
+      const st = sortState[table];
+      if (st.key === key) st.dir *= -1;
+      else {
+        st.key = key;
+        st.dir = 1; // first click: A→Z / low→high
+      }
+
+      // update indicators in this table only
+      const thead = btn.closest('thead');
+      thead.querySelectorAll('.sort-btn').forEach(b => {
+        const ind = b.querySelector('.sort-ind');
+        if (b.dataset.key === st.key) {
+          ind.textContent = st.dir === 1 ? '↑' : '↓';
+          ind.classList.remove('opacity-40');
+          ind.classList.add('text-vv-green-400');
+          b.classList.add('text-vv-green-400');
+        } else {
+          ind.textContent = '↕';
+          ind.classList.add('opacity-40');
+          ind.classList.remove('text-vv-green-400');
+          b.classList.remove('text-vv-green-400');
+        }
+      });
+
+      if (table === 'citizens') renderCitizens(document.getElementById('citizen-search').value);
+      else if (table === 'companies') renderCompanies();
+      else if (table === 'reports') renderReports();
+    }
+
+    function cmp(a, b, key, dir) {
+      let va = a[key], vb = b[key];
+      if (key === 'joined') { va = parseJoined(a.joined); vb = parseJoined(b.joined); }
+      if (key === 'net') { va = a.income - a.out; vb = b.income - b.out; }
+      if (typeof va === 'string') {
+        va = (va || '').toLowerCase();
+        vb = (vb || '').toLowerCase();
+        return va < vb ? -dir : va > vb ? dir : 0;
+      }
+      return (va - vb) * dir;
+    }
+
+    function renderCitizens(filter = '') {
+      const q = filter.toLowerCase();
+      const st = sortState.citizens;
+      let rows = CITIZENS.filter(c =>
+        !q || c.name.toLowerCase().includes(q) || c.handle.toLowerCase().includes(q)
+      );
+      if (st.key) rows = rows.slice().sort((a, b) => cmp(a, b, st.key, st.dir));
+      document.getElementById('citizens-tbody').innerHTML = rows.map(c => `
+        <tr class="hover:bg-white/[0.02]">
+          <td class="px-4 py-3">
+            <div class="font-medium">${c.name}</div>
+            <div class="text-xs text-white/35">${c.handle}</div>
+          </td>
+          <td class="px-4 py-3 font-mono text-vv-green-400">${money(c.balance)}</td>
+          <td class="px-4 py-3">${c.gigs}</td>
+          <td class="px-4 py-3 text-white/50">${c.joined}</td>
+          <td class="px-4 py-3 text-xs text-amber-300/80">${c.flags || '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function filterCitizens() {
+      renderCitizens(document.getElementById('citizen-search').value);
+    }
+
+    function promptAdjustBalance() {
+      const name = prompt('Citizen name (exact):');
+      if (!name) return;
+      const c = CITIZENS.find(x => x.name.toLowerCase() === name.toLowerCase());
+      if (!c) { alert('Citizen not found.'); return; }
+      const delta = parseFloat(prompt('Adjust by (positive or negative Vidiadollars):', '0'));
+      if (isNaN(delta)) return;
+      c.balance += delta;
+      exportToDatabase('admin_balance_adjust', { citizen: c.name, delta, balanceAfter: c.balance });
+      renderCitizens(document.getElementById('citizen-search').value);
+      alert('Balance updated for ' + c.name + ' → ' + money(c.balance));
+    }
+
+    function renderCompanies() {
+      const st = sortState.companies;
+      const rows = st.key
+        ? COMPANIES.slice().sort((a, b) => cmp(a, b, st.key, st.dir))
+        : COMPANIES.slice();
+      document.getElementById('companies-tbody').innerHTML = rows.map(co => `
+        <tr class="hover:bg-white/[0.02]">
+          <td class="px-4 py-3 font-medium">${co.name}</td>
+          <td class="px-4 py-3 text-white/70">${co.owner}</td>
+          <td class="px-4 py-3 font-mono text-vv-green-400">${money(co.balance)}</td>
+          <td class="px-4 py-3">${co.staff}</td>
+          <td class="px-4 py-3"><span class="text-xs text-vv-green-400">${co.status}</span></td>
+          <td class="px-4 py-3 text-right">
+            <a href="${co.href}" class="text-xs text-vv-blue-300 hover:text-vv-green-400">Open</a>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderApplications() {
+      const list = document.getElementById('applications-list');
+      if (!APPLICATIONS.length) {
+        list.innerHTML = '<p class="text-sm text-white/40">No pending applications.</p>';
+        return;
+      }
+      list.innerHTML = APPLICATIONS.map(a => `
+        <article class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5" id="app-${a.id}">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+            <div>
+              <h3 class="text-lg font-semibold">${a.name}</h3>
+              <p class="text-sm text-white/45">Applicant · ${a.applicant} · ${a.submitted}</p>
+            </div>
+            <div class="text-sm font-mono text-vv-green-400">Seed Ꝟ${a.capital.toLocaleString()}</div>
+          </div>
+          <p class="text-sm text-white/65 mb-4">${a.message}</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="decideApplication('${a.id}', true)"
+                    class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2 rounded-xl transition">Approve &amp; fund</button>
+            <button type="button" onclick="decideApplication('${a.id}', false)"
+                    class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm px-4 py-2 rounded-xl transition">Reject</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function decideApplication(id, approve) {
+      const idx = APPLICATIONS.findIndex(a => a.id === id);
+      if (idx < 0) return;
+      const app = APPLICATIONS[idx];
+      APPLICATIONS.splice(idx, 1);
+      exportToDatabase(approve ? 'company_app_approved' : 'company_app_rejected', app);
+      if (approve) {
+        COMPANIES.unshift({
+          name: app.name,
+          owner: app.applicant,
+          balance: app.capital,
+          staff: 1,
+          status: 'Active',
+          href: '#',
+        });
+        renderCompanies();
+      }
+      renderApplications();
+      alert(approve ? (app.name + ' approved. Starting capital sanctioned.') : (app.name + ' rejected.'));
+    }
+
+    function renderContracts() {
+      document.getElementById('admin-active-contracts').innerHTML = `
+        <li class="border border-white/10 rounded-xl px-3 py-2">
+          <a href="contract-overview?id=c_act_1" class="hover:text-vv-green-400 transition">
+            <div class="font-medium">Riverfront Café ↔ PotatoQueen</div>
+            <div class="text-xs text-white/40">Weekend rush · Ꝟ24/h · Active</div>
+          </a>
+        </li>
+        <li class="border border-white/10 rounded-xl px-3 py-2">
+          <div class="font-medium">Harbor Logistics ↔ Civic Works</div>
+          <div class="text-xs text-white/40">Dock coordination · Ꝟ800 completion</div>
+        </li>`;
+      document.getElementById('admin-pending-contracts').innerHTML = `
+        <li class="border border-white/10 rounded-xl px-3 py-2">
+          <div class="font-medium">Outgoing · YellowMan</div>
+          <div class="text-xs text-amber-300/90">Awaiting accept · ~52h left</div>
+        </li>
+        <li class="border border-white/10 rounded-xl px-3 py-2">
+          <div class="font-medium">Edit proposal · c_act_1</div>
+          <div class="text-xs text-white/40">Rate change pending counterparty</div>
+        </li>`;
+    }
+
+    function renderReports() {
+      const st = sortState.reports;
+      const rows = st.key
+        ? REPORT_ROWS.slice().sort((a, b) => cmp(a, b, st.key, st.dir))
+        : REPORT_ROWS.slice();
+      document.getElementById('reports-tbody').innerHTML = rows.map(r => {
+        const net = r.income - r.out;
+        return `<tr class="hover:bg-white/[0.02]">
+          <td class="px-4 py-3 font-medium">${r.co}</td>
+          <td class="px-4 py-3 font-mono text-vv-green-400">${money(r.income)}</td>
+          <td class="px-4 py-3 font-mono text-red-400">${money(-r.out)}</td>
+          <td class="px-4 py-3 font-mono ${net >= 0 ? 'text-vv-green-400' : 'text-red-400'}">${money(net)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function closeTaxPeriod() {
+      const start = document.getElementById('period-start').value;
+      const end = document.getElementById('period-end').value;
+      if (!start || !end) { alert('Set start and end dates.'); return; }
+      exportToDatabase('tax_period_closed', { start, end, companies: COMPANIES.map(c => c.name) });
+      const st = document.getElementById('period-status');
+      st.textContent = 'Period ' + start + ' → ' + end + ' closed. Reports generated for ' + COMPANIES.length + ' companies.';
+      st.classList.remove('hidden');
+      renderReports();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCitizens();
+      renderCompanies();
+      renderApplications();
+      renderContracts();
+      renderReports();
+    });
+  </script>
+</body>
+</html>
