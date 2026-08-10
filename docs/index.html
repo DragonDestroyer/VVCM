@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VidiaVille Currency Manager</title>
+  <title>VAULT · VidiaVille</title>
   <script src="api.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -56,9 +56,11 @@
       </p>
 
       <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-5 leading-tight">
-        <span class="text-white">VidiaVille</span><br>
-        <span class="text-vv-blue-300">Currency Manager</span>
+        <span class="text-white">VAULT</span>
       </h1>
+      <p class="text-vv-blue-300 text-sm sm:text-base font-medium tracking-wide mb-6 max-w-xl mx-auto">
+        VidiaVille Accounts, Utilities, Liabilities &amp; Treasury
+      </p>
 
       <p class="text-xl sm:text-2xl text-white/90 font-medium mb-4">
         Trust us with your life’s earnings.
@@ -69,7 +71,6 @@
         Built for the citizens who keep VidiaVille running.
       </p>
 
-      <!-- CTA opens verification flow (does not enter the site yet) -->
       <button type="button" id="btn-open-signin"
               class="inline-flex items-center gap-2 bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold px-9 py-3.5 rounded-xl transition shadow-lg shadow-vv-green-500/25">
         Sign in with Discord
@@ -81,34 +82,60 @@
     </div>
   </main>
 
-  <!-- Sign-in / Discord bot verification modal -->
+  <!-- Sign-in modal -->
   <div id="signin-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="signin-backdrop"></div>
     <div class="relative w-full max-w-md bg-vv-blue-900 border border-white/10 rounded-2xl shadow-2xl p-6 sm:p-8 text-left">
       <button type="button" id="btn-close-signin" class="absolute top-4 right-4 text-white/40 hover:text-white text-lg leading-none" aria-label="Close">&times;</button>
 
-      <!-- Step 1: identify citizen -->
+      <!-- Step 1: Discord identity -->
       <div id="step-identify">
         <h2 class="text-xl font-semibold mb-1">Citizen sign-in</h2>
         <p class="text-sm text-white/50 mb-6">
-          Verification is handled by the VidiaVille Discord bot. A one-time code will be sent to your Discord DMs after we confirm you in the citizen registry.
+          You’ll match a number shown here with choices in Discord, then receive a one-time login code from the official bot.
         </p>
         <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Discord username</label>
         <input type="text" id="discord-username" placeholder="e.g. Dragon_Destroyer"
                class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 mb-4"
                autocomplete="username" />
-        <button type="button" id="btn-request-code"
+        <button type="button" id="btn-start-challenge"
                 class="w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold py-3 rounded-xl transition">
-          Request verification code
+          Continue
         </button>
         <p id="identify-status" class="mt-3 text-sm text-white/50 hidden"></p>
       </div>
 
-      <!-- Step 2: enter code from Discord bot -->
+      <!-- Step 2: show challenge number — user picks it in Discord -->
+      <div id="step-challenge" class="hidden">
+        <h2 class="text-xl font-semibold mb-1">Match this number in Discord</h2>
+        <p class="text-sm text-white/50 mb-4">
+          The bot DMed you several options. Select the number below. After a correct pick, the bot will send your login code.
+        </p>
+        <p class="text-xs text-white/35 mb-4">Signing in as <span id="challenge-as" class="text-vv-green-400 font-medium"></span></p>
+
+        <div class="bg-vv-blue-950/80 border border-vv-green-500/30 rounded-2xl py-8 px-4 text-center mb-4">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-2">Your number</div>
+          <div id="challenge-number" class="text-5xl font-bold font-mono text-vv-green-400 tracking-wider">—</div>
+        </div>
+
+        <p id="challenge-hint" class="text-xs text-white/40 text-center mb-4">
+          Waiting for you to choose this number in Discord…
+        </p>
+        <p id="challenge-status" class="text-sm text-center text-white/50 hidden mb-3"></p>
+
+        <button type="button" id="btn-to-code" class="hidden w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold py-3 rounded-xl transition mb-2">
+          I received my code
+        </button>
+        <button type="button" id="btn-back-from-challenge" class="w-full text-sm text-white/40 hover:text-white/70 py-2">
+          Use a different account
+        </button>
+      </div>
+
+      <!-- Step 3: enter code from bot -->
       <div id="step-verify" class="hidden">
         <h2 class="text-xl font-semibold mb-1">Enter verification code</h2>
         <p class="text-sm text-white/50 mb-2">
-          Check your Discord DMs from the official bot. Codes expire quickly.
+          Enter the 6-digit code the bot sent after you picked the correct number.
         </p>
         <p class="text-xs text-white/35 mb-6">Signing in as <span id="verify-as" class="text-vv-green-400 font-medium"></span></p>
         <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">6-digit code</label>
@@ -119,7 +146,7 @@
           Verify &amp; enter
         </button>
         <button type="button" id="btn-back-identify" class="w-full mt-2 text-sm text-white/40 hover:text-white/70 py-2">
-          Use a different account
+          Start over
         </button>
         <p id="verify-status" class="mt-3 text-sm text-white/50 hidden"></p>
       </div>
@@ -127,55 +154,84 @@
   </div>
 
   <footer class="py-5 text-center text-white/30 text-xs tracking-wider">
-    VidiaVille Currency Manager · Launch v0.1
+    VAULT · Launch v0.1
   </footer>
 
   <script>
     /**
-     * Auth API placeholders — wire these to your backend / database + Discord bot.
+     * Sign-in flow (Worker + Discord bot)
      *
-     * Expected flow:
-     *  1. LOOKUP_CITIZEN  → confirm Discord user exists in the citizen DB
-     *  2. REQUEST_2FA     → bot generates a code, stores hash in DB, DMs the citizen
-     *  3. VERIFY_2FA      → compare code, create session, return citizen profile
+     * 1. Citizen enters Discord username
+     * 2. POST /auth/start-challenge
+     *      → Worker picks a correct number (e.g. 50) and two decoys (86, 24)
+     *      → Site shows only the correct number
+     *      → Bot DMs three buttons/choices; user must pick the site’s number
+     * 3. On correct Discord pick, bot DMs a 6-digit login code
+     * 4. POST /auth/verify with that code → session → dashboard
      */
     const AUTH_API = {
       async lookupCitizen(discordUsername) {
+        if (!VV_WORKER.baseUrl) return { ok: false, error: 'Sign-in worker is not connected yet.' };
         const r = await VV_AUTH.lookupCitizen(discordUsername);
-        if (!VV_WORKER.baseUrl) {
-          return { ok: false, error: 'Sign-in worker is not connected yet.' };
-        }
         if (!r.ok) return { ok: false, error: r.error || 'Lookup failed', exists: false };
         return { ok: true, exists: r.data?.exists !== false, displayName: r.data?.displayName || discordUsername };
       },
-      async requestVerificationCode(discordUsername) {
-        const r = await VV_AUTH.requestCode(discordUsername);
-        if (!VV_WORKER.baseUrl) {
-          return { ok: false, error: 'Sign-in worker is not connected yet.' };
-        }
-        if (!r.ok) return { ok: false, error: r.error || 'Could not request code' };
-        return { ok: true, message: r.data?.message };
+
+      async startChallenge(discordUsername) {
+        if (!VV_WORKER.baseUrl) return { ok: false, error: 'Sign-in worker is not connected yet.' };
+        const r = await VV_AUTH.startChallenge(discordUsername);
+        if (!r.ok) return { ok: false, error: r.error || 'Could not start challenge' };
+        // Expected data: { challengeId, correctNumber, expiresAt }
+        return {
+          ok: true,
+          challengeId: r.data?.challengeId,
+          correctNumber: r.data?.correctNumber,
+          displayName: r.data?.displayName || discordUsername,
+        };
       },
+
+      async challengeStatus(discordUsername, challengeId) {
+        if (!VV_WORKER.baseUrl) return { ok: false };
+        const r = await VV_AUTH.challengeStatus(discordUsername, challengeId);
+        if (!r.ok) return { ok: false };
+        // Expected: { status: 'pending' | 'matched' | 'expired' | 'failed', codeSent?: boolean }
+        return { ok: true, ...(r.data || {}) };
+      },
+
       async verifyCode(discordUsername, code) {
+        if (!VV_WORKER.baseUrl) return { ok: false, error: 'Sign-in worker is not connected yet.' };
         const r = await VV_AUTH.verifyCode(discordUsername, code);
-        if (!VV_WORKER.baseUrl) {
-          return { ok: false, error: 'Sign-in worker is not connected yet.' };
-        }
         if (!r.ok) return { ok: false, error: r.error || 'Invalid or expired code' };
         return { ok: true, citizen: r.data?.citizen };
       },
     };
 
     let pendingUsername = '';
+    let challengeId = '';
+    let pollTimer = null;
 
     const modal = document.getElementById('signin-modal');
     const stepIdentify = document.getElementById('step-identify');
+    const stepChallenge = document.getElementById('step-challenge');
     const stepVerify = document.getElementById('step-verify');
+
+    function showStep(name) {
+      stepIdentify.classList.toggle('hidden', name !== 'identify');
+      stepChallenge.classList.toggle('hidden', name !== 'challenge');
+      stepVerify.classList.toggle('hidden', name !== 'verify');
+    }
+
+    function stopPoll() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
 
     function openModal() {
       modal.classList.remove('hidden');
-      stepIdentify.classList.remove('hidden');
-      stepVerify.classList.add('hidden');
+      showStep('identify');
+      stopPoll();
       document.getElementById('identify-status').classList.add('hidden');
       document.getElementById('discord-username').focus();
     }
@@ -185,13 +241,43 @@
       document.getElementById('discord-username').value = '';
       document.getElementById('verify-code').value = '';
       pendingUsername = '';
+      challengeId = '';
+      stopPoll();
+      document.getElementById('btn-to-code').classList.add('hidden');
+    }
+
+    function startChallengePoll() {
+      stopPoll();
+      pollTimer = setInterval(async () => {
+        const st = await AUTH_API.challengeStatus(pendingUsername, challengeId);
+        if (!st.ok) return;
+        const statusEl = document.getElementById('challenge-status');
+        if (st.status === 'matched' || st.codeSent) {
+          stopPoll();
+          document.getElementById('challenge-hint').textContent = 'Number matched. Check Discord for your login code.';
+          statusEl.textContent = 'Code sent to your Discord DMs.';
+          statusEl.className = 'text-sm text-center text-vv-green-400 mb-3';
+          statusEl.classList.remove('hidden');
+          document.getElementById('btn-to-code').classList.remove('hidden');
+        } else if (st.status === 'failed') {
+          stopPoll();
+          statusEl.textContent = 'Wrong number selected in Discord. Start over to try again.';
+          statusEl.className = 'text-sm text-center text-red-400 mb-3';
+          statusEl.classList.remove('hidden');
+        } else if (st.status === 'expired') {
+          stopPoll();
+          statusEl.textContent = 'Challenge expired. Start over to request a new number.';
+          statusEl.className = 'text-sm text-center text-amber-300 mb-3';
+          statusEl.classList.remove('hidden');
+        }
+      }, 2500);
     }
 
     document.getElementById('btn-open-signin').addEventListener('click', openModal);
     document.getElementById('btn-close-signin').addEventListener('click', closeModal);
     document.getElementById('signin-backdrop').addEventListener('click', closeModal);
 
-    document.getElementById('btn-request-code').addEventListener('click', async () => {
+    document.getElementById('btn-start-challenge').addEventListener('click', async () => {
       const username = document.getElementById('discord-username').value.trim();
       const status = document.getElementById('identify-status');
       if (!username) {
@@ -213,19 +299,26 @@
           return;
         }
 
-        const req = await AUTH_API.requestVerificationCode(username);
-        if (!req.ok) {
-          status.textContent = req.error || 'Could not start verification. Try again later.';
+        status.textContent = 'Starting Discord challenge…';
+        const ch = await AUTH_API.startChallenge(username);
+        if (!ch.ok) {
+          status.textContent = ch.error || 'Could not start challenge.';
           status.className = 'mt-3 text-sm text-red-400';
           return;
         }
 
         pendingUsername = username;
-        document.getElementById('verify-as').textContent = lookup.displayName || username;
-        stepIdentify.classList.add('hidden');
-        stepVerify.classList.remove('hidden');
-        document.getElementById('verify-status').classList.add('hidden');
-        document.getElementById('verify-code').focus();
+        challengeId = ch.challengeId || '';
+        document.getElementById('challenge-as').textContent = ch.displayName || username;
+        document.getElementById('verify-as').textContent = ch.displayName || username;
+        document.getElementById('challenge-number').textContent =
+          ch.correctNumber != null ? String(ch.correctNumber) : '—';
+        document.getElementById('challenge-hint').textContent = 'Waiting for you to choose this number in Discord…';
+        document.getElementById('challenge-status').classList.add('hidden');
+        document.getElementById('btn-to-code').classList.add('hidden');
+
+        showStep('challenge');
+        startChallengePoll();
       } catch (err) {
         console.error(err);
         status.textContent = 'Network error talking to the registry. Try again.';
@@ -233,9 +326,20 @@
       }
     });
 
+    document.getElementById('btn-to-code').addEventListener('click', () => {
+      stopPoll();
+      showStep('verify');
+      document.getElementById('verify-code').focus();
+    });
+
+    document.getElementById('btn-back-from-challenge').addEventListener('click', () => {
+      stopPoll();
+      showStep('identify');
+    });
+
     document.getElementById('btn-back-identify').addEventListener('click', () => {
-      stepVerify.classList.add('hidden');
-      stepIdentify.classList.remove('hidden');
+      stopPoll();
+      showStep('identify');
       document.getElementById('verify-code').value = '';
     });
 
@@ -260,9 +364,6 @@
           status.className = 'mt-3 text-sm text-red-400';
           return;
         }
-
-        // On success the API should set a session cookie / token.
-        // Store display name for client UI until full session plumbing exists.
         if (result.citizen) {
           try {
             sessionStorage.setItem('vv_citizen', JSON.stringify(result.citizen));
@@ -280,7 +381,7 @@
       if (e.key === 'Enter') document.getElementById('btn-verify-code').click();
     });
     document.getElementById('discord-username').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') document.getElementById('btn-request-code').click();
+      if (e.key === 'Enter') document.getElementById('btn-start-challenge').click();
     });
   </script>
 </body>
