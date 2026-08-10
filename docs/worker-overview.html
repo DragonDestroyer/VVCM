@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vidia Motors · Worker · VidiaVille</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            vv: {
+              blue: {
+                950: '#020617', 900: '#0a1628', 800: '#0f2744', 700: '#163a5f',
+                500: '#1d6fb8', 400: '#3b8fd4', 300: '#6bb0e8',
+              },
+              green: {
+                600: '#059669', 500: '#10b981', 400: '#34d399', 300: '#6ee7b7',
+              }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .vv-bg {
+      background:
+        radial-gradient(ellipse 70% 40% at 50% -10%, rgba(29,111,184,0.20), transparent),
+        radial-gradient(ellipse 50% 30% at 80% 110%, rgba(16,185,129,0.10), transparent),
+        #020617;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .tab-btn.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+    .vv-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(16, 185, 129, 0.45) rgba(15, 39, 68, 0.8);
+    }
+    .vv-scroll::-webkit-scrollbar { width: 6px; }
+    .vv-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 39, 68, 0.6);
+      border-radius: 999px;
+    }
+    .vv-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(29, 111, 184, 0.7), rgba(16, 185, 129, 0.55));
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="vv-bg text-white min-h-full">
+
+  <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="dashboard.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
+        <span class="text-white">VidiaVille</span>
+        <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
+        <span class="text-sm text-white/70 hidden sm:inline">Dragon</span>
+        <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8">
+
+    <a href="dashboard.html" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+      Back to dashboard
+    </a>
+
+    <!-- Company hero — salary instead of company balance -->
+    <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6 mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-start gap-5">
+        <div class="w-20 h-20 rounded-2xl bg-vv-green-500/15 border border-vv-green-500/30 flex items-center justify-center text-vv-green-400 font-bold text-2xl shrink-0">
+          RC
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Vidia Motors</h1>
+            <span class="text-xs bg-vv-green-500/15 text-vv-green-400 px-2 py-0.5 rounded-full">Sales Associate</span>
+            <span class="text-xs bg-white/5 text-white/50 px-2 py-0.5 rounded-full">Sales Floor</span>
+          </div>
+          <p class="text-white/50 text-sm leading-relaxed max-w-xl">
+            Vehicle dealership serving citizens of VidiaVille — sales, trade-ins, and service packages.
+          </p>
+          <p class="text-xs text-white/30 mt-2">Your department only · roster limited to Sales Floor</p>
+        </div>
+        <div class="sm:text-right shrink-0 bg-vv-blue-950/50 border border-white/5 rounded-xl px-5 py-4 min-w-[11rem]">
+          <div class="text-xs text-white/40 uppercase tracking-wider">Your rate</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono mt-0.5" id="worker-rate">$24 / h</div>
+          <div class="text-xs text-white/35 mt-1">Base $20 · <span class="text-vv-green-400/90">+$4 project</span></div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="grid grid-cols-3 gap-2 mb-8">
+      <button type="button" onclick="showCoPanel('overview')" id="tab-overview"
+              class="tab-btn active py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Overview
+      </button>
+      <button type="button" onclick="showCoPanel('roster')" id="tab-roster"
+              class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Department
+      </button>
+      <button type="button" onclick="showCoPanel('ledger')" id="tab-ledger"
+              class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        My pay
+      </button>
+    </nav>
+
+    <!-- OVERVIEW -->
+    <div id="panel-overview" class="panel active space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Base rate</div>
+          <div class="text-2xl font-bold font-mono text-white/90">$20 / h</div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Active modifiers</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono">+$4 / h</div>
+          <div class="text-xs text-white/35 mt-1">Weekend rush project</div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Effective rate</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono">$24 / h</div>
+        </div>
+      </div>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
+        <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Rate outlook</h2>
+        <p class="text-sm text-white/45 mb-4">
+          Special projects and temporary boosts can raise your rate. Plan shifts and goals around what’s active — and what’s coming next.
+        </p>
+        <ul class="space-y-3 text-sm">
+          <li class="flex justify-between gap-3 items-start border-b border-white/5 pb-3">
+            <div>
+              <div class="font-medium text-vv-green-400">Weekend showroom event</div>
+              <div class="text-xs text-white/40 mt-0.5">Active now · ends Sun 23:59</div>
+            </div>
+            <span class="font-mono text-vv-green-400 shrink-0">+$4 / h</span>
+          </li>
+          <li class="flex justify-between gap-3 items-start border-b border-white/5 pb-3">
+            <div>
+              <div class="font-medium text-white/70">Model launch weekend</div>
+              <div class="text-xs text-white/40 mt-0.5">Starts in 9 days · 5-day window</div>
+            </div>
+            <span class="font-mono text-vv-blue-300 shrink-0">+$6 / h</span>
+          </li>
+          <li class="flex justify-between gap-3 items-start">
+            <div>
+              <div class="font-medium text-white/50">Closer training track</div>
+              <div class="text-xs text-white/40 mt-0.5">Requires Floor Lead sign-off</div>
+            </div>
+            <span class="font-mono text-white/40 shrink-0">+$3 / h</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- DEPARTMENT ROSTER only -->
+    <div id="panel-roster" class="panel space-y-6">
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Sales Floor</h2>
+          <span class="text-xs text-white/30">Your department</span>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+              <tr>
+                <th class="px-4 py-3 font-medium">Citizen</th>
+                <th class="px-4 py-3 font-medium">Role</th>
+                <th class="px-4 py-3 font-medium">Rate</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr class="hover:bg-white/[0.02] bg-vv-green-500/5">
+                <td class="px-4 py-3">
+                  <div class="font-medium">Dragon <span class="text-xs text-vv-green-400">(you)</span></div>
+                  <div class="text-xs text-white/35">@dragon</div>
+                </td>
+                <td class="px-4 py-3">Sales Associate</td>
+                <td class="px-4 py-3 font-mono text-vv-green-400">$24 / h</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02]">
+                <td class="px-4 py-3">
+                  <div class="font-medium">Jordan Ortiz</div>
+                  <div class="text-xs text-white/35">@jortiz</div>
+                </td>
+                <td class="px-4 py-3">Floor Lead</td>
+                <td class="px-4 py-3 font-mono text-vv-green-400">$24 / h</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-white/30 mt-3">Other departments are hidden from worker view.</p>
+      </section>
+    </div>
+
+    <!-- MY PAY (personal, not company ledger) -->
+    <div id="panel-ledger" class="panel space-y-6">
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-white/5">
+          <h2 class="text-sm font-medium text-white/60">Your recent pay from Vidia Motors</h2>
+        </div>
+        <table class="w-full text-sm">
+          <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+            <tr>
+              <th class="px-4 py-3 font-medium">When</th>
+              <th class="px-4 py-3 font-medium">Detail</th>
+              <th class="px-4 py-3 font-medium text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 5</td>
+              <td class="px-4 py-3 text-white/70">Shift pay · 8h @ $24</td>
+              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+$192.00</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 3</td>
+              <td class="px-4 py-3 text-white/70">Shift pay · 6h @ $24</td>
+              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+$144.00</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 1</td>
+              <td class="px-4 py-3 text-white/70">Shift pay · 8h @ $20 <span class="text-white/35">(before project)</span></td>
+              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+$160.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <p class="text-xs text-white/30 text-center">Company balance and full ledger are not available on worker view.</p>
+    </div>
+  </main>
+
+  <footer class="py-8 text-center text-white/20 text-xs tracking-wider">
+    VidiaVille Currency Manager · Launch v0.1 · Vidia Motors · Worker
+  </footer>
+
+  <script>
+    function showCoPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+  </script>
+</body>
+</html>

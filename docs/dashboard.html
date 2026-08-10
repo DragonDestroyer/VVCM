@@ -39,6 +39,21 @@
       border-color: rgba(16, 185, 129, 0.5);
       color: #34d399;
     }
+    .vv-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(16, 185, 129, 0.45) rgba(15, 39, 68, 0.8);
+    }
+    .vv-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+    .vv-scroll::-webkit-scrollbar-track { background: rgba(15, 39, 68, 0.6); border-radius: 999px; }
+    .vv-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, rgba(29, 111, 184, 0.7), rgba(16, 185, 129, 0.55));
+      border-radius: 999px;
+    }
+    .dept-column.drag-over {
+      border-color: rgba(16, 185, 129, 0.55) !important;
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .job-row.dragging { opacity: 0.45; }
   </style>
 </head>
 <body class="vv-bg text-white min-h-full">
@@ -158,7 +173,7 @@
         <div>
           <h3 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Your current gigs</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <a href="#" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
+            <a href="worker-overview.html" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
               <div class="flex justify-between items-start">
                 <div>
                   <div class="font-medium">Vidia Motors</div>
@@ -176,7 +191,7 @@
                 <span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>
               </div>
             </a>
-            <a href="#" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition sm:col-span-2">
+            <a href="owner-overview.html" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition sm:col-span-2">
               <div class="flex justify-between items-start">
                 <div>
                   <div class="font-medium">Riverfront Café</div>
@@ -288,17 +303,33 @@
             <div id="co-owner-list" class="flex flex-wrap gap-2 mt-3"></div>
           </section>
 
-          <!-- 5. Jobs / roles -->
+          <!-- 5. Jobs / roles + departments (drag & drop) -->
           <section>
-            <div class="flex items-center justify-between mb-3">
-              <label class="text-xs text-white/50 uppercase tracking-wider">Jobs &amp; salaries</label>
-              <button type="button" onclick="addJobRow()"
-                      class="text-xs text-vv-green-400 hover:text-vv-green-300 flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                Add role
-              </button>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+              <label class="text-xs text-white/50 uppercase tracking-wider">Jobs, salaries &amp; departments</label>
+              <div class="flex flex-wrap gap-3">
+                <button type="button" onclick="addDepartment()"
+                        class="text-xs text-vv-blue-300 hover:text-vv-green-400 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  Add department
+                </button>
+                <button type="button" onclick="addJobRow()"
+                        class="text-xs text-vv-green-400 hover:text-vv-green-300 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  Add role
+                </button>
+              </div>
             </div>
-            <div id="jobs-list" class="space-y-4"></div>
+            <p class="text-xs text-white/35 mb-3">Drag roles into a department column to organize the company structure.</p>
+            <div id="dept-board" class="flex gap-3 overflow-x-auto vv-scroll pb-2 items-start">
+              <!-- Unassigned pool -->
+              <div class="dept-column shrink-0 w-72 bg-vv-blue-950/40 border border-dashed border-white/15 rounded-xl p-3"
+                   data-dept-id="unassigned"
+                   ondragover="onDeptDragOver(event)" ondrop="onDeptDrop(event)" ondragleave="onDeptDragLeave(event)">
+                <div class="text-xs font-medium text-white/45 uppercase tracking-wider mb-2 px-1">Unassigned</div>
+                <div class="dept-roles space-y-3 min-h-[4rem]" id="jobs-list"></div>
+              </div>
+            </div>
           </section>
 
           <!-- 6. Application message -->
@@ -391,6 +422,8 @@
 
     let coOwners = [];
     let jobIdCounter = 0;
+    let deptIdCounter = 0;
+    let draggedJobEl = null;
 
     function showPanel(name) {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -472,7 +505,10 @@
       coOwners = [];
       renderCoOwners();
       document.getElementById('jobs-list').innerHTML = '';
+      // remove extra department columns (keep unassigned)
+      document.querySelectorAll('#dept-board .dept-column:not([data-dept-id="unassigned"])').forEach(c => c.remove());
       jobIdCounter = 0;
+      deptIdCounter = 0;
     }
 
     function cancelCompanyForm() {
@@ -529,14 +565,21 @@
     }
 
     function collectCompanyForm() {
-      // only top-level job rows (not nested underlings)
-      const topRows = document.querySelectorAll('#jobs-list > .job-row');
-      const jobs = Array.from(topRows).map(collectJobFromRow);
+      const departments = [];
+      document.querySelectorAll('#dept-board .dept-column').forEach(col => {
+        const deptId = col.dataset.deptId;
+        const nameInput = col.querySelector('.dept-name-input');
+        const deptName = deptId === 'unassigned'
+          ? 'Unassigned'
+          : (nameInput ? nameInput.value.trim() || 'Untitled department' : 'Untitled');
+        const roles = Array.from(col.querySelectorAll(':scope > .dept-roles > .job-row')).map(collectJobFromRow);
+        departments.push({ id: deptId, name: deptName, roles });
+      });
       return {
         name: document.getElementById('co-name').value.trim(),
         description: document.getElementById('co-desc').value.trim(),
         coOwners: [...coOwners],
-        jobs,
+        departments,
         application: document.getElementById('co-application').value.trim(),
         hasLogo: !document.getElementById('logo-preview').classList.contains('hidden'),
       };
@@ -632,15 +675,82 @@
       ).join('');
     }
 
+    /* Departments + drag & drop */
+    function addDepartment() {
+      const id = 'dept_' + (++deptIdCounter);
+      const col = document.createElement('div');
+      col.className = 'dept-column shrink-0 w-72 bg-vv-blue-900/40 border border-white/10 rounded-xl p-3';
+      col.dataset.deptId = id;
+      col.ondragover = onDeptDragOver;
+      col.ondrop = onDeptDrop;
+      col.ondragleave = onDeptDragLeave;
+      col.innerHTML = `
+        <div class="flex items-center gap-2 mb-2">
+          <input type="text" class="dept-name-input flex-1 bg-transparent border-b border-white/10 focus:border-vv-green-500/50 text-xs font-medium text-white/70 uppercase tracking-wider px-1 py-0.5 focus:outline-none"
+                 placeholder="Department name" value="Department ${deptIdCounter}" />
+          <button type="button" onclick="removeDepartment(this)" class="text-white/30 hover:text-red-400 text-sm leading-none" title="Remove department">&times;</button>
+        </div>
+        <div class="dept-roles space-y-3 min-h-[4rem]"></div>
+      `;
+      document.getElementById('dept-board').appendChild(col);
+    }
+
+    function removeDepartment(btn) {
+      const col = btn.closest('.dept-column');
+      const roles = col.querySelector('.dept-roles');
+      const unassigned = document.querySelector('#dept-board [data-dept-id="unassigned"] .dept-roles');
+      // move roles back to unassigned
+      Array.from(roles.querySelectorAll(':scope > .job-row')).forEach(r => unassigned.appendChild(r));
+      col.remove();
+    }
+
+    function onDeptDragOver(e) {
+      e.preventDefault();
+      const col = e.currentTarget;
+      col.classList.add('drag-over');
+    }
+    function onDeptDragLeave(e) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+    function onDeptDrop(e) {
+      e.preventDefault();
+      const col = e.currentTarget;
+      col.classList.remove('drag-over');
+      if (!draggedJobEl) return;
+      const list = col.querySelector('.dept-roles');
+      list.appendChild(draggedJobEl);
+      draggedJobEl.classList.remove('dragging');
+      draggedJobEl = null;
+    }
+
     /* Jobs / roles — with Leader nesting */
     function addJobRow(parentContainer, isSub) {
       const id = ++jobIdCounter;
       const row = document.createElement('div');
       row.className = 'job-row bg-vv-blue-950/50 border border-white/10 rounded-xl p-4 space-y-3' + (isSub ? ' border-l-2 border-l-vv-green-500/40' : '');
       row.dataset.jobId = id;
+      if (!isSub) {
+        row.draggable = true;
+        row.addEventListener('dragstart', (e) => {
+          // don't start drag from form fields
+          if (e.target.closest('input, textarea, button, label, select')) {
+            e.preventDefault();
+            return;
+          }
+          draggedJobEl = row;
+          row.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        row.addEventListener('dragend', () => {
+          row.classList.remove('dragging');
+          draggedJobEl = null;
+          document.querySelectorAll('.dept-column').forEach(c => c.classList.remove('drag-over'));
+        });
+      }
       row.innerHTML = `
         <div class="flex items-start justify-between gap-2">
-          <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          ${!isSub ? '<div class="text-white/25 cursor-grab active:cursor-grabbing mt-6 mr-1 select-none" title="Drag to department">⠿</div>' : ''}
+          <div class="flex-1 grid grid-cols-1 gap-3">
             <div>
               <label class="block text-xs text-white/40 mb-1">Role name</label>
               <input type="text" class="job-role-name w-full bg-vv-blue-950 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" placeholder="${isSub ? 'e.g. Junior Associate' : 'e.g. Sales Associate'}" />

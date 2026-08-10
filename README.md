@@ -1,24 +1,90 @@
-# VidiaVille Currency Manager (static UI)
+# VidiaVille Currency Manager
 
-This folder is a **static** front-end suitable for **GitHub Pages**.
+Static front-end for VidiaVille’s civic ledger (Launch v0.1).  
+Hosted via **Cloudflare Pages**, source managed in **GitHub**.
 
-## Enable GitHub Pages
+> Trust us with your life’s earnings.
 
-1. Push this repo to GitHub
-2. Repo → **Settings** → **Pages**
-3. Source: **Deploy from a branch**
-4. Branch: `main` (or `master`), folder: **`/docs`**
-5. Save — site will be at `https://<you>.github.io/<repo>/`
+## Live site files (`docs/`)
 
-## Pages
-
-| File | What it is |
-|------|------------|
+| File | Page |
+|------|------|
 | `index.html` | Homepage |
-| `dashboard.html` | Citizen dashboard (Account / Companies / Pay + Create Company form) |
+| `dashboard.html` | Citizen dashboard (Account / Companies / Pay + Create Company) |
+| `owner-overview.html` | Company owner view (Riverfront Café template) |
+| `worker-overview.html` | Company worker view (Vidia Motors template) |
 
-**Sign in with Discord** currently goes straight to the dashboard as **Dragon** (temporary testing).
+### Navigation map
 
-## Note
+```
+index.html
+  └─ Sign in → dashboard.html
+       ├─ Riverfront Café (Owner) → owner-overview.html
+       ├─ Vidia Motors (Sales Associate) → worker-overview.html
+       └─ Harbor Logistics → (not linked yet)
+```
 
-This is UI-only. Login, balances, company applications, and admin approval still need a backend later (Flask, Cloudflare Workers, etc.). The Create Company form saves drafts to `localStorage` and logs Apply to the browser console for now.
+## Deploy: GitHub → Cloudflare Pages
+
+### 1. Push this folder to GitHub
+
+```bash
+cd vidiaville-payroll
+git init
+git add .
+git commit -m "VidiaVille Currency Manager — Launch v0.1 static UI"
+git branch -M main
+git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
+git push -u origin main
+```
+
+### 2. Connect Cloudflare Pages
+
+1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+2. Select this repository
+3. Build settings:
+
+| Setting | Value |
+|---------|--------|
+| Production branch | `main` |
+| Framework preset | **None** |
+| Build command | *(leave empty)* |
+| **Build output directory** | **`docs`** |
+
+4. **Save and Deploy**
+
+Pushes to `main` redeploy automatically.
+
+### 3. Custom domain (optional)
+
+Pages project → **Custom domains** → add e.g. `currency.vidiaville.com`.
+
+DNS (Cloudflare DNS recommended):
+
+| Type | Name | Target |
+|------|------|--------|
+| CNAME | `currency` | `YOUR_PROJECT.pages.dev` |
+
+HTTPS is handled by Cloudflare.
+
+> `docs/CNAME` is only for GitHub Pages. Cloudflare uses the dashboard + DNS.
+
+## Local preview
+
+```bash
+cd docs
+python3 -m http.server 8080
+# → http://127.0.0.1:8080
+```
+
+## Placeholders
+
+- Discord login → dashboard as **Dragon** (testing only)
+- Money / applications → `localStorage` + console until a database API exists
+- Flask sketch in `backend/` is **not** deployed to Cloudflare
+
+## Design
+
+- Address users as **citizens**
+- Currency: **Vidiadollars**
+- Colors: blue + green, white accents

@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Riverfront Café · VidiaVille</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            vv: {
+              blue: {
+                950: '#020617', 900: '#0a1628', 800: '#0f2744', 700: '#163a5f',
+                500: '#1d6fb8', 400: '#3b8fd4', 300: '#6bb0e8',
+              },
+              green: {
+                600: '#059669', 500: '#10b981', 400: '#34d399', 300: '#6ee7b7',
+              }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .vv-bg {
+      background:
+        radial-gradient(ellipse 70% 40% at 50% -10%, rgba(29,111,184,0.20), transparent),
+        radial-gradient(ellipse 50% 30% at 80% 110%, rgba(16,185,129,0.10), transparent),
+        #020617;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .tab-btn.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+    /* VidiaVille-styled scrollbars */
+    .vv-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(16, 185, 129, 0.45) rgba(15, 39, 68, 0.8);
+    }
+    .vv-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .vv-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 39, 68, 0.6);
+      border-radius: 999px;
+    }
+    .vv-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(29, 111, 184, 0.7), rgba(16, 185, 129, 0.55));
+      border-radius: 999px;
+    }
+    .vv-scroll::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(59, 143, 212, 0.9), rgba(52, 211, 153, 0.75));
+    }
+  </style>
+</head>
+<body class="vv-bg text-white min-h-full">
+
+  <!-- Header -->
+  <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="dashboard.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
+        <span class="text-white">VidiaVille</span>
+        <span class="text-vv-blue-300 font-normal text-sm ml-1">Currency Manager</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
+        <span class="text-sm text-white/70 hidden sm:inline">Dragon</span>
+        <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- Back link -->
+    <a href="dashboard.html" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+      Back to dashboard
+    </a>
+
+    <!-- Company hero -->
+    <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6 mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-start gap-5">
+        <!-- Logo -->
+        <div class="w-20 h-20 rounded-2xl bg-vv-green-500/15 border border-vv-green-500/30 flex items-center justify-center text-vv-green-400 font-bold text-2xl shrink-0">
+          RC
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Riverfront Café</h1>
+            <span class="text-xs bg-vv-blue-500/20 text-vv-blue-300 px-2 py-0.5 rounded-full">Owner</span>
+          </div>
+          <p class="text-white/50 text-sm leading-relaxed max-w-xl">
+            A riverside café serving citizens of VidiaVille — coffee, pastries, and quiet tables by the water.
+          </p>
+          <p class="text-xs text-white/30 mt-2">Established 04 Apr 2026 · ID <span class="font-mono">co_riverfront_01</span></p>
+        </div>
+        <div class="sm:text-right shrink-0 bg-vv-blue-950/50 border border-white/5 rounded-xl px-5 py-4">
+          <div class="text-xs text-white/40 uppercase tracking-wider">Company balance</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono mt-0.5" id="company-balance">$6,340.00</div>
+          <div class="text-xs text-white/30">Vidiadollars</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <nav class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8">
+      <button type="button" onclick="showCoPanel('overview')" id="tab-overview"
+              class="tab-btn active py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Overview
+      </button>
+      <button type="button" onclick="showCoPanel('roster')" id="tab-roster"
+              class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Roster
+      </button>
+      <button type="button" onclick="showCoPanel('ledger')" id="tab-ledger"
+              class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Ledger
+      </button>
+      <button type="button" onclick="showCoPanel('manage')" id="tab-manage"
+              class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Manage
+      </button>
+    </nav>
+
+    <!-- ========== OVERVIEW ========== -->
+    <div id="panel-overview" class="panel active space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Citizens on payroll</div>
+          <div class="text-2xl font-bold">4</div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Open positions</div>
+          <div class="text-2xl font-bold">1</div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+          <div class="text-xs text-white/40 uppercase tracking-wider mb-1">This period net</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono">+$420</div>
+        </div>
+      </div>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Recent movement</h2>
+            <button type="button" id="movement-info-btn" onclick="toggleMovementDetails()"
+                    class="w-5 h-5 rounded-full border border-white/20 text-white/40 hover:text-vv-green-400 hover:border-vv-green-500/50 text-xs font-semibold leading-none flex items-center justify-center transition"
+                    title="Show transaction details" aria-label="Show transaction details">
+              i
+            </button>
+            <button type="button" id="movement-shuffle-btn" onclick="shuffleChartType()"
+                    class="w-5 h-5 rounded-full border border-white/20 text-white/40 hover:text-vv-green-400 hover:border-vv-green-500/50 flex items-center justify-center transition"
+                    title="Change chart type" aria-label="Change chart type">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-9L21 12m0 0L16.5 16.5M21 12H7.5"/></svg>
+            </button>
+            <button type="button" id="movement-refresh-btn" onclick="refreshMovementChart()"
+                    class="w-5 h-5 rounded-full border border-white/20 text-white/40 hover:text-vv-green-400 hover:border-vv-green-500/50 flex items-center justify-center transition"
+                    title="Refresh chart data" aria-label="Refresh chart data">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" class="range-btn active text-xs px-2.5 py-1 rounded-lg border border-vv-green-500/40 bg-vv-green-500/10 text-vv-green-400" data-range="week" onclick="setMovementRange('week')">Last week</button>
+            <button type="button" class="range-btn text-xs px-2.5 py-1 rounded-lg border border-white/10 text-white/50 hover:border-vv-green-500/30 hover:text-vv-green-400 transition" data-range="month" onclick="setMovementRange('month')">Last month</button>
+            <button type="button" class="range-btn text-xs px-2.5 py-1 rounded-lg border border-white/10 text-white/50 hover:border-vv-green-500/30 hover:text-vv-green-400 transition" data-range="year" onclick="setMovementRange('year')">Last year</button>
+            <button type="button" class="range-btn text-xs px-2.5 py-1 rounded-lg border border-white/10 text-white/50 hover:border-vv-green-500/30 hover:text-vv-green-400 transition" data-range="all" onclick="setMovementRange('all')">All time</button>
+          </div>
+        </div>
+
+        <div class="relative h-56 sm:h-64 mb-2">
+          <canvas id="movement-chart"></canvas>
+        </div>
+        <div id="chart-legend" class="flex items-center justify-center gap-6 text-xs text-white/40 mb-2">
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-vv-green-500"></span> Income</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-red-400/80"></span> Outflow</span>
+        </div>
+        <p id="chart-type-label" class="text-center text-[10px] text-white/25 tracking-wider uppercase">Bar chart</p>
+
+        <!-- Detail list: only visible when "i" is pressed -->
+        <div id="movement-details" class="hidden mt-4 pt-4 border-t border-white/10">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-medium text-white/45 uppercase tracking-wider">Transaction details</h3>
+            <button type="button" onclick="toggleMovementDetails()" class="text-xs text-white/35 hover:text-white/60">Hide</button>
+          </div>
+          <ul id="movement-details-list" class="vv-scroll space-y-3 max-h-56 overflow-y-auto pr-1">
+            <!-- filled by JS -->
+          </ul>
+        </div>
+      </section>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
+        <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Tax reports</h2>
+        <p class="text-sm text-white/40 mb-4">Period summaries generated when an administrator closes the civic period.</p>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between bg-vv-blue-950/50 border border-white/5 rounded-xl px-4 py-3 text-sm">
+            <span class="text-white/70">01 Jul 2026 → 31 Jul 2026</span>
+            <span class="font-mono text-vv-green-400">+$1,240 net</span>
+          </div>
+          <div class="flex items-center justify-between bg-vv-blue-950/50 border border-white/5 rounded-xl px-4 py-3 text-sm">
+            <span class="text-white/70">01 Jun 2026 → 30 Jun 2026</span>
+            <span class="font-mono text-vv-green-400">+$980 net</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========== ROSTER ========== -->
+    <div id="panel-roster" class="panel space-y-6">
+      <section>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+          <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Active roster</h2>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-white/40">Department</label>
+            <select id="roster-dept-filter" onchange="filterRosterDept()"
+                    class="bg-vv-blue-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
+              <option value="all">All departments</option>
+              <option value="management">Management</option>
+              <option value="front">Front of House</option>
+              <option value="kitchen">Kitchen</option>
+            </select>
+          </div>
+        </div>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+              <tr>
+                <th class="px-4 py-3 font-medium">Citizen</th>
+                <th class="px-4 py-3 font-medium">Role</th>
+                <th class="px-4 py-3 font-medium">Department</th>
+                <th class="px-4 py-3 font-medium">Rate</th>
+                <th class="px-4 py-3 font-medium">Permissions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5" id="roster-tbody">
+              <tr class="roster-row hover:bg-white/[0.02]" data-dept="management">
+                <td class="px-4 py-3">
+                  <div class="font-medium">Dragon</div>
+                  <div class="text-xs text-white/35">@dragon</div>
+                </td>
+                <td class="px-4 py-3"><span class="text-vv-blue-300">Owner</span></td>
+                <td class="px-4 py-3 text-white/50">Management</td>
+                <td class="px-4 py-3 font-mono text-white/50">—</td>
+                <td class="px-4 py-3 text-xs text-white/50">Full access</td>
+              </tr>
+              <tr class="roster-row hover:bg-white/[0.02]" data-dept="front">
+                <td class="px-4 py-3">
+                  <div class="font-medium">Maya Chen</div>
+                  <div class="text-xs text-white/35">@mchen</div>
+                </td>
+                <td class="px-4 py-3">Barista</td>
+                <td class="px-4 py-3 text-white/50">Front of House</td>
+                <td class="px-4 py-3 font-mono text-vv-green-400">$20 / h</td>
+                <td class="px-4 py-3 text-xs text-white/40">—</td>
+              </tr>
+              <tr class="roster-row hover:bg-white/[0.02]" data-dept="front">
+                <td class="px-4 py-3">
+                  <div class="font-medium">Jordan Ortiz</div>
+                  <div class="text-xs text-white/35">@jortiz</div>
+                </td>
+                <td class="px-4 py-3">Shift Lead</td>
+                <td class="px-4 py-3 text-white/50">Front of House</td>
+                <td class="px-4 py-3 font-mono text-vv-green-400">$24 / h</td>
+                <td class="px-4 py-3 text-xs text-white/50">Pay underlings</td>
+              </tr>
+              <tr class="roster-row hover:bg-white/[0.02]" data-dept="kitchen">
+                <td class="px-4 py-3">
+                  <div class="font-medium">Riley Park</div>
+                  <div class="text-xs text-white/35">@rpark</div>
+                </td>
+                <td class="px-4 py-3">Kitchen</td>
+                <td class="px-4 py-3 text-white/50">Kitchen</td>
+                <td class="px-4 py-3 font-mono text-vv-green-400">$18 / h</td>
+                <td class="px-4 py-3 text-xs text-white/40">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-white/30 mt-3">
+          <a href="worker-overview.html" class="text-vv-blue-300 hover:text-vv-green-400 transition">Open sample worker overview</a>
+          (Vidia Motors · Sales Floor)
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Open positions</h2>
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div class="font-medium">Part-time Server</div>
+            <div class="text-sm text-white/45">$16 / h · 1 opening · Front of House</div>
+          </div>
+          <span class="text-xs bg-vv-green-500/10 text-vv-green-400 px-2.5 py-1 rounded-full self-start">Hiring</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========== LEDGER ========== -->
+    <div id="panel-ledger" class="panel">
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+          <h2 class="text-sm font-medium text-white/60">Company ledger</h2>
+          <span class="text-xs text-white/30">Last 30 days · sample data</span>
+        </div>
+        <table class="w-full text-sm">
+          <thead class="bg-vv-blue-950/50 text-white/40 text-left">
+            <tr>
+              <th class="px-4 py-3 font-medium">When</th>
+              <th class="px-4 py-3 font-medium">Type</th>
+              <th class="px-4 py-3 font-medium">Detail</th>
+              <th class="px-4 py-3 font-medium text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5" id="ledger-body">
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 6, 18:40</td>
+              <td class="px-4 py-3 capitalize">Income</td>
+              <td class="px-4 py-3 text-white/70">Daily sales deposit</td>
+              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+$186.00</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 5, 22:00</td>
+              <td class="px-4 py-3 capitalize">Salary</td>
+              <td class="px-4 py-3 text-white/70">Maya Chen · Barista</td>
+              <td class="px-4 py-3 text-right font-mono text-red-400">−$160.00</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 4, 14:15</td>
+              <td class="px-4 py-3 capitalize">Expense</td>
+              <td class="px-4 py-3 text-white/70">Supply order · Harbor Goods</td>
+              <td class="px-4 py-3 text-right font-mono text-red-400">−$95.00</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 4, 19:05</td>
+              <td class="px-4 py-3 capitalize">Income</td>
+              <td class="px-4 py-3 text-white/70">Daily sales deposit</td>
+              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+$210.00</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 3, 21:30</td>
+              <td class="px-4 py-3 capitalize">Salary</td>
+              <td class="px-4 py-3 text-white/70">Jordan Ortiz · Shift Lead</td>
+              <td class="px-4 py-3 text-right font-mono text-red-400">−$192.00</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 2, 11:00</td>
+              <td class="px-4 py-3 capitalize">Transfer</td>
+              <td class="px-4 py-3 text-white/70">Owner draw · Dragon</td>
+              <td class="px-4 py-3 text-right font-mono text-red-400">−$100.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- ========== MANAGE (owner tools) ========== -->
+    <div id="panel-manage" class="panel space-y-6">
+      <p class="text-sm text-white/45">Owner tools for Riverfront Café. Actions are stored locally for now and prepared for database export.</p>
+
+      <!-- Record transaction -->
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-1">Record transaction</h2>
+        <p class="text-sm text-white/45 mb-5">Income, expenses, salaries, and transfers against company funds.</p>
+        <form id="tx-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="return submitTransaction(event)">
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Type</label>
+            <select id="tx-type" class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="salary">Salary</option>
+              <option value="transfer">Transfer to citizen</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Amount (Vidiadollars)</label>
+            <input type="number" id="tx-amount" min="0.01" step="0.01" required placeholder="0.00"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Citizen <span class="text-white/30">(salary / transfer)</span></label>
+            <input type="text" id="tx-citizen" list="roster-citizens" placeholder="Select or type name"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+            <datalist id="roster-citizens">
+              <option value="Dragon"></option>
+              <option value="Maya Chen"></option>
+              <option value="Jordan Ortiz"></option>
+              <option value="Riley Park"></option>
+            </datalist>
+          </div>
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Description</label>
+            <input type="text" id="tx-desc" placeholder="Optional note"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+          <div class="sm:col-span-2">
+            <button type="submit"
+                    class="w-full sm:w-auto bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold px-6 py-2.5 rounded-xl transition">
+              Record
+            </button>
+          </div>
+        </form>
+        <p id="tx-status" class="mt-3 text-sm text-vv-green-400 hidden"></p>
+      </section>
+
+      <!-- Pay salary quick -->
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-1">Run payroll (sample)</h2>
+        <p class="text-sm text-white/45 mb-4">Pays listed rates for one shift block. Placeholder — will post to database later.</p>
+        <button type="button" onclick="runPayrollSample()"
+                class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium px-5 py-2.5 rounded-xl transition">
+          Pay all active roles (demo)
+        </button>
+        <p id="payroll-status" class="mt-3 text-sm text-white/50 hidden"></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="py-8 text-center text-white/20 text-xs tracking-wider">
+    VidiaVille Currency Manager · Launch v0.1 · Riverfront Café
+  </footer>
+
+  <script>
+    /* ---------- Company context (would come from DB) ---------- */
+    const COMPANY = {
+      id: 'co_riverfront_01',
+      name: 'Riverfront Café',
+      balance: 6340.00,
+    };
+
+    // Placeholder destination for future database / API
+    const DB_ENDPOINT = null; // e.g. 'https://api.example.com/v1/transactions'
+
+    /* ---------- Sample movement history (would come from DB) ---------- */
+    // amounts: positive = income, negative = outflow
+    const MOVEMENT_HISTORY = (function buildHistory() {
+      const items = [];
+      const now = new Date();
+      const day = (offset, hour, label, amount) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() + offset);
+        d.setHours(hour, 0, 0, 0);
+        items.push({ at: d, label, amount });
+      };
+      // last ~10 days
+      day(0, 18, 'Daily sales deposit', 186);
+      day(-1, 22, 'Salary · Maya Chen (Barista)', -160);
+      day(-2, 14, 'Supply order · Harbor Goods', -95);
+      day(-2, 19, 'Daily sales deposit', 210);
+      day(-3, 21, 'Salary · Jordan Ortiz (Shift Lead)', -192);
+      day(-4, 18, 'Daily sales deposit', 175);
+      day(-5, 12, 'Owner draw · Dragon', -100);
+      day(-6, 19, 'Daily sales deposit', 198);
+      day(-7, 10, 'Kitchen supplies', -48);
+      day(-8, 18, 'Daily sales deposit', 220);
+      day(-10, 22, 'Salary · Riley Park (Kitchen)', -144);
+      day(-12, 18, 'Daily sales deposit', 160);
+      day(-14, 15, 'Equipment repair', -85);
+      day(-18, 19, 'Daily sales deposit', 205);
+      day(-22, 11, 'Salary · Maya Chen (Barista)', -160);
+      day(-28, 18, 'Daily sales deposit', 190);
+      day(-35, 16, 'Catering event income', 450);
+      day(-40, 22, 'Salary run', -480);
+      day(-55, 18, 'Daily sales deposit', 170);
+      day(-70, 14, 'Furniture purchase', -320);
+      day(-90, 18, 'Grand opening week sales', 890);
+      day(-120, 10, 'Initial capital deposit', 3000);
+      return items.sort((a, b) => a.at - b.at);
+    })();
+
+    let movementChart = null;
+    let currentRange = 'week';
+    const CHART_TYPES = ['bar', 'pie', 'stock'];
+    let currentChartType = 'bar';
+
+    function rangeCutoff(range) {
+      const now = new Date();
+      if (range === 'all') return new Date(0);
+      const d = new Date(now);
+      if (range === 'week') d.setDate(d.getDate() - 7);
+      else if (range === 'month') d.setMonth(d.getMonth() - 1);
+      else if (range === 'year') d.setFullYear(d.getFullYear() - 1);
+      return d;
+    }
+
+    function filteredMovements(range) {
+      const cut = rangeCutoff(range);
+      return MOVEMENT_HISTORY.filter(m => m.at >= cut);
+    }
+
+    function bucketKey(date, range) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      if (range === 'week' || range === 'month') return `${y}-${m}-${d}`;
+      if (range === 'year') return `${y}-${m}`;
+      // all time → by month
+      return `${y}-${m}`;
+    }
+
+    function bucketLabel(key, range) {
+      if (range === 'week' || range === 'month') {
+        const [y, m, d] = key.split('-');
+        const dt = new Date(+y, +m - 1, +d);
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      const [y, m] = key.split('-');
+      const dt = new Date(+y, +m - 1, 1);
+      return dt.toLocaleDateString('en-US', { month: 'short', year: range === 'all' ? '2-digit' : undefined });
+    }
+
+    function aggregateForChart(range) {
+      const filtered = filteredMovements(range);
+      const map = new Map(); // key -> { income, outflow }
+      filtered.forEach(m => {
+        const k = bucketKey(m.at, range);
+        if (!map.has(k)) map.set(k, { income: 0, outflow: 0 });
+        const b = map.get(k);
+        if (m.amount >= 0) b.income += m.amount;
+        else b.outflow += Math.abs(m.amount);
+      });
+      const keys = Array.from(map.keys()).sort();
+      return {
+        labels: keys.map(k => bucketLabel(k, range)),
+        income: keys.map(k => map.get(k).income),
+        outflow: keys.map(k => map.get(k).outflow),
+        filtered,
+      };
+    }
+
+    function updateChartChrome(type, periodNet) {
+      const legend = document.getElementById('chart-legend');
+      const label = document.getElementById('chart-type-label');
+      if (type === 'bar') {
+        legend.innerHTML = `
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-vv-green-500"></span> Income</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-red-400/80"></span> Outflow</span>`;
+        label.textContent = 'Bar chart';
+      } else if (type === 'pie') {
+        legend.innerHTML = `
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-vv-green-500"></span> Income</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-400/80"></span> Outflow</span>`;
+        label.textContent = 'Pie chart';
+      } else {
+        legend.innerHTML = `
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-vv-green-500"></span> Rising</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-red-400/80"></span> Falling</span>`;
+        label.textContent = 'Stock chart · net over time';
+      }
+    }
+
+    function renderMovementChart(range) {
+      const agg = aggregateForChart(range);
+      const { labels, income, outflow, filtered } = agg;
+      const canvas = document.getElementById('movement-chart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      if (movementChart) {
+        movementChart.destroy();
+        movementChart = null;
+      }
+
+      const periodNet = filtered.reduce((s, m) => s + m.amount, 0);
+      updateChartChrome(currentChartType, periodNet);
+
+      const tooltipBase = {
+        backgroundColor: 'rgba(10, 22, 40, 0.95)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#94a3b8',
+        bodyColor: '#e2e8f0',
+        padding: 10,
+      };
+
+      if (currentChartType === 'pie') {
+        const totalIn = income.reduce((a, b) => a + b, 0);
+        const totalOut = outflow.reduce((a, b) => a + b, 0);
+        movementChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Income', 'Outflow'],
+            datasets: [{
+              data: [totalIn, totalOut],
+              backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(248, 113, 113, 0.7)'],
+              borderColor: ['rgba(16, 185, 129, 1)', 'rgba(248, 113, 113, 0.95)'],
+              borderWidth: 1,
+              hoverOffset: 6,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '58%',
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                ...tooltipBase,
+                callbacks: {
+                  label: (c) => ` ${c.label}: $${Number(c.raw).toFixed(2)}`,
+                },
+              },
+            },
+          },
+        });
+        return;
+      }
+
+      if (currentChartType === 'stock') {
+        // Cumulative net: straight segments; green when rising, red when falling (line + fill)
+        let running = 0;
+        const cumulative = labels.map((_, i) => {
+          running += (income[i] || 0) - (outflow[i] || 0);
+          return running;
+        });
+
+        const chartH = canvas.parentElement.clientHeight || 220;
+        const greenLine = 'rgb(16, 185, 129)';
+        const redLine = 'rgb(248, 113, 113)';
+
+        function makeFill(up) {
+          const g = ctx.createLinearGradient(0, 0, 0, chartH);
+          if (up) {
+            g.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+            g.addColorStop(1, 'rgba(16, 185, 129, 0)');
+          } else {
+            g.addColorStop(0, 'rgba(248, 113, 113, 0.35)');
+            g.addColorStop(1, 'rgba(248, 113, 113, 0)');
+          }
+          return g;
+        }
+
+        // One dataset per segment so line + gradient can switch color on direction changes
+        const segmentSets = [];
+        for (let i = 0; i < cumulative.length - 1; i++) {
+          const up = cumulative[i + 1] >= cumulative[i];
+          const data = new Array(cumulative.length).fill(null);
+          data[i] = cumulative[i];
+          data[i + 1] = cumulative[i + 1];
+          segmentSets.push({
+            label: up ? 'Rising' : 'Falling',
+            data,
+            borderColor: up ? greenLine : redLine,
+            backgroundColor: makeFill(up),
+            fill: true,
+            tension: 0,
+            spanGaps: false,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            borderWidth: 2,
+            order: 2,
+          });
+        }
+
+        // Points on top (color matches segment that arrives at this point)
+        const pointColors = cumulative.map((v, i) => {
+          if (i === 0) {
+            return cumulative.length > 1 && cumulative[1] >= cumulative[0] ? greenLine : redLine;
+          }
+          return cumulative[i] >= cumulative[i - 1] ? greenLine : redLine;
+        });
+        segmentSets.push({
+          label: 'Cumulative net',
+          data: cumulative,
+          showLine: false,
+          fill: false,
+          tension: 0,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: pointColors,
+          borderWidth: 0,
+          order: 1,
+        });
+
+        movementChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: segmentSets,
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                ...tooltipBase,
+                filter: (item) => item.dataset.showLine === false || item.dataset.label === 'Cumulative net',
+                callbacks: {
+                  label: (c) => {
+                    if (c.raw == null || c.dataset.showLine !== false) return null;
+                    const v = Number(c.raw);
+                    return ` Net: ${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                ticks: { color: 'rgba(255,255,255,0.4)', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+              },
+              y: {
+                grid: { color: 'rgba(255,255,255,0.06)' },
+                ticks: {
+                  color: 'rgba(255,255,255,0.4)',
+                  callback: (v) => (v < 0 ? '−' : '') + '$' + Math.abs(v),
+                },
+              },
+            },
+          },
+        });
+        return;
+      }
+
+      // default: bar
+      movementChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Income',
+              data: income,
+              backgroundColor: 'rgba(16, 185, 129, 0.75)',
+              borderRadius: 4,
+              maxBarThickness: 28,
+            },
+            {
+              label: 'Outflow',
+              data: outflow,
+              backgroundColor: 'rgba(248, 113, 113, 0.65)',
+              borderRadius: 4,
+              maxBarThickness: 28,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              ...tooltipBase,
+              callbacks: {
+                label: (c) => ` ${c.dataset.label}: $${Number(c.raw).toFixed(2)}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: 'rgba(255,255,255,0.4)', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.06)' },
+              ticks: {
+                color: 'rgba(255,255,255,0.4)',
+                callback: (v) => '$' + v,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function shuffleChartType() {
+      const i = CHART_TYPES.indexOf(currentChartType);
+      currentChartType = CHART_TYPES[(i + 1) % CHART_TYPES.length];
+      renderMovementChart(currentRange);
+    }
+
+    function refreshMovementChart() {
+      // Placeholder: later this will re-fetch / recache from the database
+      const btn = document.getElementById('movement-refresh-btn');
+      btn.classList.add('animate-spin');
+      // simulate brief refresh; DB_ENDPOINT would be used here
+      console.log('[DB placeholder] refresh movement cache for', COMPANY.id, 'range=', currentRange);
+      setTimeout(() => {
+        renderMovementChart(currentRange);
+        renderMovementDetails(currentRange);
+        btn.classList.remove('animate-spin');
+      }, 400);
+    }
+
+    function renderMovementDetails(range) {
+      const list = document.getElementById('movement-details-list');
+      const filtered = filteredMovements(range).slice().sort((a, b) => b.at - a.at);
+      if (!filtered.length) {
+        list.innerHTML = '<li class="text-sm text-white/40">No transactions in this range.</li>';
+        return;
+      }
+      list.innerHTML = filtered.map(m => {
+        const when = m.at.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const positive = m.amount >= 0;
+        return `<li class="flex justify-between gap-3 text-sm">
+          <div>
+            <div>${m.label}</div>
+            <div class="text-xs text-white/35">${when}</div>
+          </div>
+          <span class="font-mono shrink-0 ${positive ? 'text-vv-green-400' : 'text-red-400/90'}">${formatMoney(m.amount)}</span>
+        </li>`;
+      }).join('');
+    }
+
+    function setMovementRange(range) {
+      currentRange = range;
+      document.querySelectorAll('.range-btn').forEach(btn => {
+        const on = btn.dataset.range === range;
+        btn.classList.toggle('active', on);
+        btn.classList.toggle('border-vv-green-500/40', on);
+        btn.classList.toggle('bg-vv-green-500/10', on);
+        btn.classList.toggle('text-vv-green-400', on);
+        btn.classList.toggle('border-white/10', !on);
+        btn.classList.toggle('text-white/50', !on);
+      });
+      renderMovementChart(range);
+      renderMovementDetails(range);
+    }
+
+    function toggleMovementDetails() {
+      const el = document.getElementById('movement-details');
+      const btn = document.getElementById('movement-info-btn');
+      const open = el.classList.toggle('hidden') === false;
+      btn.classList.toggle('text-vv-green-400', open);
+      btn.classList.toggle('border-vv-green-500/50', open);
+      if (open) renderMovementDetails(currentRange);
+    }
+
+    function filterRosterDept() {
+      const v = document.getElementById('roster-dept-filter').value;
+      document.querySelectorAll('.roster-row').forEach(row => {
+        const show = v === 'all' || row.dataset.dept === v;
+        row.classList.toggle('hidden', !show);
+      });
+    }
+
+    function showCoPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+      // Chart.js needs a visible canvas to size correctly
+      if (name === 'overview' && movementChart) {
+        setTimeout(() => movementChart.resize(), 50);
+      }
+    }
+
+    function formatMoney(n) {
+      return (n < 0 ? '−' : '+') + '$' + Math.abs(n).toFixed(2);
+    }
+
+    function updateBalanceDisplay() {
+      document.getElementById('company-balance').textContent =
+        '$' + COMPANY.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /** Export payload somewhere later — localStorage + console for now */
+    function exportToDatabase(kind, payload) {
+      const record = {
+        companyId: COMPANY.id,
+        kind,
+        payload,
+        at: new Date().toISOString(),
+      };
+      // local staging
+      const key = 'vv_company_exports_' + COMPANY.id;
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      existing.push(record);
+      localStorage.setItem(key, JSON.stringify(existing));
+
+      if (DB_ENDPOINT) {
+        // fetch(DB_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) })
+        console.log('[DB] would POST to', DB_ENDPOINT, record);
+      } else {
+        console.log('[DB placeholder] staged export:', record);
+      }
+      return record;
+    }
+
+    function prependLedgerRow(type, detail, amount, isInflow) {
+      const tbody = document.getElementById('ledger-body');
+      const tr = document.createElement('tr');
+      const now = new Date();
+      const when = now.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      tr.innerHTML = `
+        <td class="px-4 py-3 text-white/40 whitespace-nowrap">${when}</td>
+        <td class="px-4 py-3 capitalize">${type}</td>
+        <td class="px-4 py-3 text-white/70">${detail}</td>
+        <td class="px-4 py-3 text-right font-mono ${isInflow ? 'text-vv-green-400' : 'text-red-400'}">${formatMoney(isInflow ? amount : -amount)}</td>
+      `;
+      tbody.insertBefore(tr, tbody.firstChild);
+    }
+
+    function submitTransaction(e) {
+      e.preventDefault();
+      const type = document.getElementById('tx-type').value;
+      const amount = parseFloat(document.getElementById('tx-amount').value);
+      const citizen = document.getElementById('tx-citizen').value.trim();
+      const desc = document.getElementById('tx-desc').value.trim();
+
+      if (!amount || amount <= 0) {
+        alert('Enter a valid amount.');
+        return false;
+      }
+      if ((type === 'salary' || type === 'transfer') && !citizen) {
+        alert('Choose a citizen for salary or transfer.');
+        return false;
+      }
+      if (type !== 'income' && COMPANY.balance < amount) {
+        alert('Insufficient company balance.');
+        return false;
+      }
+
+      const isInflow = type === 'income';
+      if (isInflow) COMPANY.balance += amount;
+      else COMPANY.balance -= amount;
+      updateBalanceDisplay();
+
+      const detail = desc || (citizen ? `${type} · ${citizen}` : type);
+      prependLedgerRow(type, detail, amount, isInflow);
+
+      exportToDatabase('transaction', {
+        type,
+        amount,
+        citizen: citizen || null,
+        description: desc || null,
+        balanceAfter: COMPANY.balance,
+      });
+
+      const status = document.getElementById('tx-status');
+      status.textContent = 'Transaction recorded and staged for database export.';
+      status.classList.remove('hidden');
+      document.getElementById('tx-form').reset();
+      setTimeout(() => status.classList.add('hidden'), 4000);
+      return false;
+    }
+
+    function runPayrollSample() {
+      const lines = [
+        { name: 'Maya Chen', role: 'Barista', amount: 160 },
+        { name: 'Jordan Ortiz', role: 'Shift Lead', amount: 192 },
+        { name: 'Riley Park', role: 'Kitchen', amount: 144 },
+      ];
+      const total = lines.reduce((s, l) => s + l.amount, 0);
+      if (COMPANY.balance < total) {
+        alert('Insufficient balance for full payroll demo ($' + total + ' needed).');
+        return;
+      }
+      lines.forEach(l => {
+        COMPANY.balance -= l.amount;
+        prependLedgerRow('salary', l.name + ' · ' + l.role, l.amount, false);
+      });
+      updateBalanceDisplay();
+      exportToDatabase('payroll_run', { lines, total, balanceAfter: COMPANY.balance });
+      const el = document.getElementById('payroll-status');
+      el.textContent = 'Paid $' + total.toFixed(2) + ' across ' + lines.length + ' roles. Staged for DB export.';
+      el.classList.remove('hidden');
+    }
+
+    // Init movement chart on load
+    document.addEventListener('DOMContentLoaded', () => {
+      setMovementRange('week');
+    });
+  </script>
+</body>
+</html>
