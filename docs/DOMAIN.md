@@ -11,7 +11,7 @@
 If you use GitHub Pages instead of Cloudflare, keep the `CNAME` file in this folder:
 
 ```
-currency.vidiaville.com
+vvcm.pages.dev
 ```
 
 Then set the same domain under GitHub → Settings → Pages.
