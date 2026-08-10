@@ -24,4 +24,10 @@ Hosted via **Cloudflare Pages**, source managed in **GitHub**.
 
 - Address users as **citizens**
 - Currency: **Vidiadollars**
-- Colors: blue + green, white accents
+
+## Functions
+
+- Scheduled payment
+- Custom company creation
+- Peer to peer transactions
+- Company to company contracts
