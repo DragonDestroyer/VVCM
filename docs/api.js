@@ -1,8 +1,23 @@
 /**
- * VAULT Worker API client
+ * VAULT API clients
+ *
+ * verify-bot  → Discord auth only
+ * ledger-bot  → UUID, balances, transactions, /me
+ *
+ * Both Workers should bind the SAME KV namespace as AUTH
+ * so sessions created at login are visible to the ledger.
  */
+window.VV_AUTH_URL = 'https://verify-bot.max7gorman.workers.dev';
+window.VV_LEDGER_URL = 'https://vault-ledger.max7gorman.workers.dev'; // change after you create it
+
 window.VV_WORKER = {
-  baseUrl: 'https://verify-bot.max7gorman.workers.dev',
+  // legacy alias used by auth helpers — points at auth worker
+  get baseUrl() {
+    return window.VV_AUTH_URL;
+  },
+  set baseUrl(v) {
+    window.VV_AUTH_URL = v;
+  },
 
   getToken() {
     try {
@@ -12,12 +27,12 @@ window.VV_WORKER = {
     }
   },
 
-  async request(method, path, body) {
-    if (!this.baseUrl) {
-      console.warn('[VV Worker] baseUrl not set', method, path);
+  async request(base, method, path, body) {
+    if (!base) {
+      console.warn('[VAULT] endpoint not set', method, path);
       return { ok: false, status: 0, error: 'Worker endpoint not configured', data: null };
     }
-    const url = this.baseUrl.replace(/\/$/, '') + path;
+    const url = String(base).replace(/\/$/, '') + path;
     try {
       const headers = {
         'Content-Type': 'application/json',
@@ -48,37 +63,46 @@ window.VV_WORKER = {
         error: res.ok ? null : (data && data.error) || res.statusText,
       };
     } catch (err) {
-      console.error('[VV Worker] network error', err);
+      console.error('[VAULT] network error', err);
       return { ok: false, status: 0, error: err.message || 'Network error', data: null };
     }
   },
 
+  // Auth worker
+  authGet(path) {
+    return this.request(window.VV_AUTH_URL, 'GET', path);
+  },
+  authPost(path, body) {
+    return this.request(window.VV_AUTH_URL, 'POST', path, body);
+  },
+
+  // Ledger worker
   get(path) {
-    return this.request('GET', path);
+    return this.request(window.VV_LEDGER_URL, 'GET', path);
   },
   post(path, body) {
-    return this.request('POST', path, body);
+    return this.request(window.VV_LEDGER_URL, 'POST', path, body);
   },
   patch(path, body) {
-    return this.request('PATCH', path, body);
+    return this.request(window.VV_LEDGER_URL, 'PATCH', path, body);
   },
   delete(path) {
-    return this.request('DELETE', path);
+    return this.request(window.VV_LEDGER_URL, 'DELETE', path);
   },
 };
 
 window.VV_AUTH = {
   lookupCitizen(discordUsername) {
-    return VV_WORKER.post('/auth/lookup', { discordUsername });
+    return VV_WORKER.authPost('/auth/lookup', { discordUsername });
   },
   startChallenge(discordUsername) {
-    return VV_WORKER.post('/auth/start-challenge', { discordUsername });
+    return VV_WORKER.authPost('/auth/start-challenge', { discordUsername });
   },
   challengeStatus(discordUsername, challengeId) {
     const q = new URLSearchParams({ discordUsername, challengeId });
-    return VV_WORKER.get('/auth/challenge-status?' + q.toString());
+    return VV_WORKER.authGet('/auth/challenge-status?' + q.toString());
   },
   verifyCode(discordUsername, code) {
-    return VV_WORKER.post('/auth/verify', { discordUsername, code });
+    return VV_WORKER.authPost('/auth/verify', { discordUsername, code });
   },
 };
