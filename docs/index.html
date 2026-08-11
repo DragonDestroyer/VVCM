@@ -105,11 +105,11 @@
         <p id="identify-status" class="mt-3 text-sm text-white/50 hidden"></p>
       </div>
 
-      <!-- Step 2: show challenge number — user picks it in Discord -->
+      <!-- Step 2: match number + enter code -->
       <div id="step-challenge" class="hidden">
         <h2 class="text-xl font-semibold mb-1">Match this number in Discord</h2>
         <p class="text-sm text-white/50 mb-4">
-          The bot DMed you several options. Select the number below. After a correct pick, the bot will send your login code.
+          Select the number below in your Discord DM. The bot will then send a 6-digit login code.
         </p>
         <p class="text-xs text-white/35 mb-4">Signing in as <span id="challenge-as" class="text-vv-green-400 font-medium"></span></p>
 
@@ -118,38 +118,32 @@
           <div id="challenge-number" class="text-5xl font-bold font-mono text-vv-green-400 tracking-wider">—</div>
         </div>
 
-        <p id="challenge-hint" class="text-xs text-white/40 text-center mb-4">
+        <p id="challenge-hint" class="text-xs text-white/40 text-center mb-2">
           Waiting for you to choose this number in Discord…
         </p>
-        <p id="challenge-status" class="text-sm text-center text-white/50 hidden mb-3"></p>
+        <p id="challenge-status" class="text-sm text-center text-white/50 hidden mb-4"></p>
 
-        <button type="button" id="btn-to-code" class="hidden w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold py-3 rounded-xl transition mb-2">
-          I received my code
-        </button>
-        <button type="button" id="btn-back-from-challenge" class="w-full text-sm text-white/40 hover:text-white/70 py-2">
+        <div class="border-t border-white/10 pt-4 mt-2">
+          <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">6-digit login code</label>
+          <input type="text" id="verify-code" inputmode="numeric" maxlength="6" placeholder="••••••"
+                 class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono tracking-[0.3em] text-center focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 mb-3" />
+          <button type="button" id="btn-verify-code"
+                  class="w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold py-3 rounded-xl transition">
+            Verify &amp; enter
+          </button>
+          <p id="verify-status" class="mt-3 text-sm text-white/50 hidden"></p>
+        </div>
+
+        <button type="button" id="btn-back-from-challenge" class="w-full mt-3 text-sm text-white/40 hover:text-white/70 py-2">
           Use a different account
         </button>
       </div>
 
-      <!-- Step 3: enter code from bot -->
-      <div id="step-verify" class="hidden">
-        <h2 class="text-xl font-semibold mb-1">Enter verification code</h2>
-        <p class="text-sm text-white/50 mb-2">
-          Enter the 6-digit code the bot sent after you picked the correct number.
-        </p>
-        <p class="text-xs text-white/35 mb-6">Signing in as <span id="verify-as" class="text-vv-green-400 font-medium"></span></p>
-        <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">6-digit code</label>
-        <input type="text" id="verify-code" inputmode="numeric" maxlength="6" placeholder="••••••"
-               class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono tracking-[0.3em] text-center focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 mb-4" />
-        <button type="button" id="btn-verify-code"
-                class="w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold py-3 rounded-xl transition">
-          Verify &amp; enter
-        </button>
-        <button type="button" id="btn-back-identify" class="w-full mt-2 text-sm text-white/40 hover:text-white/70 py-2">
-          Start over
-        </button>
-        <p id="verify-status" class="mt-3 text-sm text-white/50 hidden"></p>
-      </div>
+      <!-- kept for compatibility; unused -->
+      <div id="step-verify" class="hidden"></div>
+      <span id="verify-as" class="hidden"></span>
+      <button type="button" id="btn-to-code" class="hidden"></button>
+      <button type="button" id="btn-back-identify" class="hidden"></button>
     </div>
   </div>
 
@@ -254,11 +248,15 @@
         const statusEl = document.getElementById('challenge-status');
         if (st.status === 'matched' || st.codeSent) {
           stopPoll();
-          document.getElementById('challenge-hint').textContent = 'Number matched. Check Discord for your login code.';
+          document.getElementById('challenge-hint').textContent = 'Number matched — enter the code from Discord below.';
           statusEl.textContent = 'Code sent to your Discord DMs.';
           statusEl.className = 'text-sm text-center text-vv-green-400 mb-3';
           statusEl.classList.remove('hidden');
-          document.getElementById('btn-to-code').classList.remove('hidden');
+          const codeInput = document.getElementById('verify-code');
+          if (codeInput) {
+            codeInput.focus();
+            codeInput.classList.add('ring-2', 'ring-vv-green-500/50');
+          }
         } else if (st.status === 'failed') {
           stopPoll();
           statusEl.textContent = 'Wrong number selected in Discord. Start over to try again.';
@@ -270,7 +268,7 @@
           statusEl.className = 'text-sm text-center text-amber-300 mb-3';
           statusEl.classList.remove('hidden');
         }
-      }, 2500);
+      }, 1500);
     }
 
     document.getElementById('btn-open-signin').addEventListener('click', openModal);
