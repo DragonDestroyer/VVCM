@@ -196,7 +196,7 @@
         if (!VV_WORKER.baseUrl) return { ok: false, error: 'Sign-in worker is not connected yet.' };
         const r = await VV_AUTH.verifyCode(discordUsername, code);
         if (!r.ok) return { ok: false, error: r.error || 'Invalid or expired code' };
-        return { ok: true, citizen: r.data?.citizen };
+        return { ok: true, citizen: r.data?.citizen, token: r.data?.token };
       },
     };
 
@@ -362,11 +362,10 @@
           status.className = 'mt-3 text-sm text-red-400';
           return;
         }
-        if (result.citizen) {
-          try {
-            sessionStorage.setItem('vv_citizen', JSON.stringify(result.citizen));
-          } catch (_) {}
-        }
+        try {
+          if (result.token) sessionStorage.setItem('vv_token', result.token);
+          if (result.citizen) sessionStorage.setItem('vv_citizen', JSON.stringify(result.citizen));
+        } catch (_) {}
         window.location.href = 'dashboard';
       } catch (err) {
         console.error(err);
