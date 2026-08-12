@@ -136,14 +136,47 @@
     <div id="panel-citizens" class="panel space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">All citizens</h2>
-        <div class="flex gap-2">
-          <input type="search" id="citizen-search" oninput="filterCitizens()" placeholder="Search citizens…"
-                 class="bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
-          <button type="button" onclick="promptAdjustBalance()"
-                  class="text-sm bg-vv-green-500/15 text-vv-green-400 border border-vv-green-500/30 px-3 py-2 rounded-xl hover:bg-vv-green-500/25 transition">
-            Adjust balance
-          </button>
+        <input type="search" id="citizen-search" oninput="filterCitizens()" placeholder="Search citizens…"
+               class="bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50 sm:max-w-xs" />
+      </div>
+
+      <!-- Grant / adjust money -->
+      <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <h3 class="text-sm font-medium text-vv-green-400">Grant or adjust Vidiadollars</h3>
+          <p id="grant-status" class="text-xs text-white/40"></p>
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs text-white/40 uppercase tracking-wider mb-1">Citizen username</label>
+            <input type="text" id="grant-username" list="grant-citizen-list" placeholder="dragon_destroyer"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+            <datalist id="grant-citizen-list"></datalist>
+          </div>
+          <div>
+            <label class="block text-xs text-white/40 uppercase tracking-wider mb-1">Mode</label>
+            <select id="grant-mode"
+                    class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
+              <option value="grant">Grant (+ add)</option>
+              <option value="remove">Remove (− subtract)</option>
+              <option value="set">Set exact balance</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-white/40 uppercase tracking-wider mb-1">Amount (Ꝟ)</label>
+            <input type="number" id="grant-amount" step="0.01" min="0" placeholder="1000"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+          <div>
+            <label class="block text-xs text-white/40 uppercase tracking-wider mb-1">Note</label>
+            <input type="text" id="grant-note" placeholder="Starting stipend"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+        </div>
+        <button type="button" id="btn-grant-money"
+                class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-5 py-2.5 rounded-xl transition">
+          Apply to ledger
+        </button>
       </div>
       <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
         <div class="overflow-x-auto vv-scroll">
@@ -422,18 +455,70 @@
       renderCitizens(document.getElementById('citizen-search').value);
     }
 
-    function promptAdjustBalance() {
-      const name = prompt('Citizen name (exact):');
-      if (!name) return;
-      const c = CITIZENS.find(x => x.name.toLowerCase() === name.toLowerCase());
-      if (!c) { alert('Citizen not found.'); return; }
-      const delta = parseFloat(prompt('Adjust by (positive or negative Vidiadollars):', '0'));
-      if (isNaN(delta)) return;
-      c.balance += delta;
-      exportToDatabase('admin_balance_adjust', { citizen: c.name, delta, balanceAfter: c.balance });
-      renderCitizens(document.getElementById('citizen-search').value);
-      alert('Balance updated for ' + c.name + ' → ' + money(c.balance));
+    function refreshGrantDatalist() {
+      const dl = document.getElementById('grant-citizen-list');
+      if (!dl) return;
+      dl.innerHTML = CITIZENS.map(c => {
+        const u = c.username || (c.handle || '').replace(/^@/, '') || c.name;
+        return `<option value="${u}">${c.name}</option>`;
+      }).join('');
     }
+
+    async function applyGrantMoney() {
+      const status = document.getElementById('grant-status');
+      const username = document.getElementById('grant-username').value.trim();
+      const mode = document.getElementById('grant-mode').value;
+      const amountRaw = parseFloat(document.getElementById('grant-amount').value);
+      const note = document.getElementById('grant-note').value.trim() || 'Admin adjustment';
+      if (!username) {
+        status.textContent = 'Enter a citizen username.';
+        status.className = 'text-xs text-amber-300';
+        return;
+      }
+      if (!Number.isFinite(amountRaw) || amountRaw < 0) {
+        status.textContent = 'Enter a valid amount.';
+        status.className = 'text-xs text-amber-300';
+        return;
+      }
+
+      status.textContent = 'Updating ledger…';
+      status.className = 'text-xs text-white/40';
+
+      let res;
+      if (mode === 'set') {
+        res = await VV_WORKER.adminPost('/admin/citizen/set-balance', {
+          username,
+          balance: amountRaw,
+        });
+      } else {
+        const amount = mode === 'remove' ? -Math.abs(amountRaw) : Math.abs(amountRaw);
+        res = await VV_WORKER.adminPost('/admin/citizen/grant', {
+          username,
+          amount,
+          note,
+        });
+      }
+
+      if (!res.ok) {
+        status.textContent = res.error || res.data?.error || 'Failed';
+        status.className = 'text-xs text-red-400';
+        return;
+      }
+
+      const bal = res.data?.balance;
+      status.textContent = 'Updated — balance is now ' + money(bal);
+      status.className = 'text-xs text-vv-green-400';
+
+      // refresh citizens table from worker
+      const cits = await VV_WORKER.adminGet('/admin/citizens');
+      if (cits.ok && cits.data && cits.data.items) {
+        CITIZENS = cits.data.items;
+        refreshGrantDatalist();
+        renderCitizens(document.getElementById('citizen-search').value);
+      }
+    }
+
+    document.getElementById('btn-grant-money')?.addEventListener('click', applyGrantMoney);
 
     function renderCompanies() {
       const st = sortState.companies;
@@ -580,7 +665,10 @@
         VV_WORKER.adminGet('/admin/reports/latest'),
         VV_WORKER.adminGet('/admin/stats'),
       ]);
-      if (cits.ok && cits.data && cits.data.items) CITIZENS = cits.data.items;
+      if (cits.ok && cits.data && cits.data.items) {
+        CITIZENS = cits.data.items;
+        if (typeof refreshGrantDatalist === 'function') refreshGrantDatalist();
+      }
       if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
       if (apps.ok && apps.data && apps.data.items) APPLICATIONS = apps.data.items;
       if (reps.ok && reps.data && reps.data.items) REPORT_ROWS = reps.data.items;
