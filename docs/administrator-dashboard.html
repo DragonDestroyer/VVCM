@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Administrator · VidiaVille</title>
-  <script src="api.js"></script>
+    <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="favicon.png" />
+<script src="api.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -57,8 +59,9 @@
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <a href="index.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
-        <span class="text-white">VAULT</span>
-        <span class="text-vv-blue-300 font-normal text-sm ml-1">VidiaVille</span>
+        <a href="dashboard" class="inline-flex items-center" title="VAULT">
+          <img src="vault-logo.png" alt="VAULT" class="h-7 sm:h-8 w-auto select-none" draggable="false" />
+        </a>
       </a>
       <div class="flex items-center gap-3">
         <span class="text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">Administrator</span>
@@ -320,7 +323,7 @@
 
     function exportToDatabase(kind, payload) {
       const record = { kind, payload, at: new Date().toISOString() };
-      VV_WORKER.post('/admin/events', record);
+      VV_WORKER.adminPost('/admin/events', record);
       return record;
     }
 
@@ -503,7 +506,7 @@
       const pending = document.getElementById('admin-pending-contracts');
       active.innerHTML = '<li class="text-white/40 text-sm">No active contracts loaded.</li>';
       pending.innerHTML = '<li class="text-white/40 text-sm">No pending contracts loaded.</li>';
-      VV_WORKER.get('/admin/contracts').then(res => {
+      VV_WORKER.adminGet('/admin/contracts').then(res => {
         if (!res.ok || !res.data) return;
         const a = res.data.active || [];
         const p = res.data.pending || [];
@@ -550,8 +553,19 @@
   </script>
 
   <script>
+    
+    function requireAdminSession() {
+      const token = sessionStorage.getItem('vv_token');
+      if (!token) {
+        window.location.href = 'index.html';
+        return false;
+      }
+      return true;
+    }
+
     async function loadAdminDashboard() {
-      if (!VV_WORKER.baseUrl) {
+      if (!requireAdminSession()) return;
+      if (!window.VV_ADMIN_URL) {
         renderCitizens();
         renderCompanies();
         renderApplications();
@@ -560,11 +574,11 @@
         return;
       }
       const [cits, cos, apps, reps, stats] = await Promise.all([
-        VV_WORKER.get('/admin/citizens'),
-        VV_WORKER.get('/admin/companies'),
-        VV_WORKER.get('/admin/applications'),
-        VV_WORKER.get('/admin/reports/latest'),
-        VV_WORKER.get('/admin/stats'),
+        VV_WORKER.adminGet('/admin/citizens'),
+        VV_WORKER.adminGet('/admin/companies'),
+        VV_WORKER.adminGet('/admin/applications'),
+        VV_WORKER.adminGet('/admin/reports/latest'),
+        VV_WORKER.adminGet('/admin/stats'),
       ]);
       if (cits.ok && cits.data && cits.data.items) CITIZENS = cits.data.items;
       if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
