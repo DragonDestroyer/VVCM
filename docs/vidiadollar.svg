@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vidiadollar">
+  <g fill="#10b981">
+    <!-- left arm of V -->
+    <polygon points="8,6 26,54 34,54 20,6"/>
+    <!-- right arm of V -->
+    <polygon points="44,6 30,54 38,54 56,6"/>
+    <!-- diagonal stroke -->
+    <polygon points="12,46 50,10 54,14 16,50"/>
+  </g>
+</svg>

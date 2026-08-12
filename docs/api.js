@@ -116,3 +116,61 @@ window.VV_AUTH = {
     return VV_WORKER.authPost('/auth/verify', { discordUsername, code });
   },
 };
+
+
+/* ---------- Vidiadollar symbol (mobile image fallback) ---------- */
+(function () {
+  if (typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = `
+      .vv-currency-icon {
+        display: inline-block;
+        width: 0.9em;
+        height: 0.9em;
+        vertical-align: -0.12em;
+        margin-right: 0.08em;
+      }
+    `;
+    document.head?.appendChild(style);
+    // if script loads before head is ready
+    if (!document.head) {
+      document.addEventListener('DOMContentLoaded', () => document.head.appendChild(style));
+    }
+  }
+})();
+
+window.VV_CURRENCY_IMG = 'vidiadollar.svg';
+
+window.vvUseCurrencyImage = function () {
+  try {
+    return window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
+  } catch {
+    return false;
+  }
+};
+
+/** Format money. Returns HTML string when mobile (image symbol), plain text otherwise. */
+window.vvMoney = function (n, opts) {
+  opts = opts || {};
+  if (n == null || n === '') return '—';
+  const num = Number(n);
+  if (!Number.isFinite(num)) return '—';
+  const sign = num < 0 ? '−' : '';
+  const body = Math.abs(num).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const forceImg = opts.forceImage === true;
+  const forceText = opts.forceText === true;
+  const useImg = !forceText && (forceImg || window.vvUseCurrencyImage());
+  if (useImg) {
+    return (
+      sign +
+      '<img src="' +
+      window.VV_CURRENCY_IMG +
+      '" class="vv-currency-icon" alt="V" />' +
+      body
+    );
+  }
+  return sign + 'Ꝟ' + body;
+};

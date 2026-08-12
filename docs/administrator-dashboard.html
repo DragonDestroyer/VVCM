@@ -480,41 +480,51 @@
         status.className = 'text-xs text-amber-300';
         return;
       }
-
-      status.textContent = 'Updating ledger…';
-      status.className = 'text-xs text-white/40';
-
-      let res;
-      if (mode === 'set') {
-        res = await VV_WORKER.adminPost('/admin/citizen/set-balance', {
-          username,
-          balance: amountRaw,
-        });
-      } else {
-        const amount = mode === 'remove' ? -Math.abs(amountRaw) : Math.abs(amountRaw);
-        res = await VV_WORKER.adminPost('/admin/citizen/grant', {
-          username,
-          amount,
-          note,
-        });
-      }
-
-      if (!res.ok) {
-        status.textContent = res.error || res.data?.error || 'Failed';
+      if (!window.VV_ADMIN_URL || typeof VV_WORKER.adminPost !== 'function') {
+        status.textContent = 'Admin API not loaded — redeploy api.js with VV_ADMIN_URL.';
         status.className = 'text-xs text-red-400';
         return;
       }
 
-      const bal = res.data?.balance;
-      status.textContent = 'Updated — balance is now ' + money(bal);
-      status.className = 'text-xs text-vv-green-400';
+      status.textContent = 'Updating ledger…';
+      status.className = 'text-xs text-white/40';
 
-      // refresh citizens table from worker
-      const cits = await VV_WORKER.adminGet('/admin/citizens');
-      if (cits.ok && cits.data && cits.data.items) {
-        CITIZENS = cits.data.items;
-        refreshGrantDatalist();
-        renderCitizens(document.getElementById('citizen-search').value);
+      try {
+        let res;
+        if (mode === 'set') {
+          res = await VV_WORKER.adminPost('/admin/citizen/set-balance', {
+            username,
+            balance: amountRaw,
+          });
+        } else {
+          const amount = mode === 'remove' ? -Math.abs(amountRaw) : Math.abs(amountRaw);
+          res = await VV_WORKER.adminPost('/admin/citizen/grant', {
+            username,
+            amount,
+            note,
+          });
+        }
+
+        if (!res.ok) {
+          status.textContent = res.error || res.data?.error || ('Failed (' + res.status + ')');
+          status.className = 'text-xs text-red-400';
+          return;
+        }
+
+        const bal = res.data?.balance;
+        status.textContent = 'Updated — balance is now ' + money(bal);
+        status.className = 'text-xs text-vv-green-400';
+
+        const cits = await VV_WORKER.adminGet('/admin/citizens');
+        if (cits.ok && cits.data && cits.data.items) {
+          CITIZENS = cits.data.items;
+          refreshGrantDatalist();
+          renderCitizens(document.getElementById('citizen-search')?.value || '');
+        }
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Request error: ' + (err.message || err);
+        status.className = 'text-xs text-red-400';
       }
     }
 

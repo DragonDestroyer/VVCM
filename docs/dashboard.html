@@ -750,9 +750,13 @@
 
   <script>
     function money(n) {
-      if (n == null || n === '') return '—';
-      const sign = n < 0 ? '−' : '';
-      return sign + 'Ꝟ' + Math.abs(Number(n)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return typeof vvMoney === 'function' ? vvMoney(n) : ('Ꝟ' + Number(n).toLocaleString());
+    }
+    function setMoneyEl(el, n) {
+      if (!el) return;
+      const html = money(n);
+      if (html.includes('<img')) el.innerHTML = html;
+      else el.textContent = html;
     }
 
     function requireSession() {
@@ -764,11 +768,32 @@
       return true;
     }
 
+    function discordAvatarUrl(u) {
+      if (!u) return 'https://cdn.discordapp.com/embed/avatars/0.png';
+      if (u.avatar && String(u.avatar).startsWith('http')) return u.avatar;
+      const id = u.discordId || u.id;
+      const hash = u.avatarHash || (u.avatar && !String(u.avatar).startsWith('http') ? u.avatar : null);
+      if (id && hash) {
+        const ext = String(hash).startsWith('a_') ? 'gif' : 'png';
+        return 'https://cdn.discordapp.com/avatars/' + id + '/' + hash + '.' + ext + '?size=128';
+      }
+      if (id) {
+        try {
+          // Discord default avatar index from snowflake
+          const idx = Number(BigInt(String(id)) >> 22n) % 6;
+          return 'https://cdn.discordapp.com/embed/avatars/' + idx + '.png';
+        } catch {
+          return 'https://cdn.discordapp.com/embed/avatars/0.png';
+        }
+      }
+      return 'https://cdn.discordapp.com/embed/avatars/0.png';
+    }
+
     function applyUser(u) {
       if (!u) return;
       const name = u.displayName || u.name || '—';
       const handle = u.handle ? '@' + String(u.handle).replace(/^@/, '') : '';
-      const avatar = u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+      const avatar = discordAvatarUrl(u);
 
       const nameEl = document.getElementById('account-name');
       if (nameEl) nameEl.textContent = name;
@@ -783,9 +808,9 @@
       const hn = document.getElementById('header-name');
       if (hn) hn.textContent = name;
       const bal = document.getElementById('account-balance');
-      if (bal) bal.textContent = money(u.balance);
+      if (bal) setMoneyEl(bal, u.balance);
       const pb = document.getElementById('pay-balance');
-      if (pb) pb.textContent = money(u.balance);
+      if (pb) setMoneyEl(pb, u.balance);
       window.VV_CURRENT_USER = name;
       // refresh admin panel visibility
       const btn = document.getElementById('admin-panel-btn');
