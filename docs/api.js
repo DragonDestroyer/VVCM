@@ -1,14 +1,16 @@
 /**
  * VAULT API clients
  *
- * verify-bot  → Discord auth only
- * ledger-bot  → UUID, balances, transactions, /me
+ * verify-bot   → Discord auth only
+ * vault-ledger → UUID, balances, transactions, /me
+ * vault-admin  → administrator panel APIs
  *
- * Both Workers should bind the SAME KV namespace as AUTH
- * so sessions created at login are visible to the ledger.
+ * All three Workers should bind the SAME KV namespace as AUTH
+ * so sessions and citizen records are shared.
  */
 window.VV_AUTH_URL = 'https://verify-bot.max7gorman.workers.dev';
 window.VV_LEDGER_URL = 'https://vault-ledger.max7gorman.workers.dev'; // change after you create it
+window.VV_ADMIN_URL = 'https://vault-admin.max7gorman.workers.dev'; // change after you create it
 
 window.VV_WORKER = {
   // legacy alias used by auth helpers — points at auth worker
@@ -88,6 +90,14 @@ window.VV_WORKER = {
   },
   delete(path) {
     return this.request(window.VV_LEDGER_URL, 'DELETE', path);
+  },
+
+  // Admin worker
+  adminGet(path) {
+    return this.request(window.VV_ADMIN_URL, 'GET', path);
+  },
+  adminPost(path, body) {
+    return this.request(window.VV_ADMIN_URL, 'POST', path, body);
   },
 };
 
