@@ -734,17 +734,12 @@
   </script>
 
   <script>
-    // Admin panel access — only these citizens see the header control
-    window.VV_ADMIN_PANEL_ACCESS = ['Dragon_Destroyer', 'Apple'];
-    window.VV_CURRENT_USER = window.VV_CURRENT_USER || 'Dragon_Destroyer';
-    (function showAdminPanelButton() {
-      const btn = document.getElementById('admin-panel-btn');
-      if (!btn) return;
-      const allowed = window.VV_ADMIN_PANEL_ACCESS.map(n => n.toLowerCase());
-      if (allowed.includes(String(window.VV_CURRENT_USER).toLowerCase())) {
-        btn.classList.remove('hidden');
-      }
-    })();
+    // Fallback name list (UI only). Real gate is vault-admin ADMIN_NAMES + server probe.
+    window.VV_ADMIN_PANEL_ACCESS = [
+      'Dragon_Destroyer', 'dragon_destroyer',
+      'Apple', 'apple'
+    ];
+    window.VV_CURRENT_USER = window.VV_CURRENT_USER || '';
   </script>
 
 
@@ -812,12 +807,49 @@
       const pb = document.getElementById('pay-balance');
       if (pb) setMoneyEl(pb, u.balance);
       window.VV_CURRENT_USER = name;
-      // refresh admin panel visibility
+      updateAdminPanelButton(u);
+    }
+
+    function normalizeAdminId(s) {
+      return String(s || '').trim().replace(/^@/, '').toLowerCase();
+    }
+
+    function localAdminMatch(u) {
+      const allowed = (window.VV_ADMIN_PANEL_ACCESS || []).map(normalizeAdminId);
+      const candidates = [
+        u?.displayName,
+        u?.name,
+        u?.handle,
+        u?.username,
+        window.VV_CURRENT_USER,
+      ]
+        .filter(Boolean)
+        .map(normalizeAdminId);
+      return candidates.some((c) => allowed.includes(c));
+    }
+
+    async function updateAdminPanelButton(u) {
       const btn = document.getElementById('admin-panel-btn');
-      if (btn) {
-        const allowed = (window.VV_ADMIN_PANEL_ACCESS || []).map(n => n.toLowerCase());
-        if (allowed.includes(String(name).toLowerCase())) btn.classList.remove('hidden');
-        else btn.classList.add('hidden');
+      if (!btn) return;
+      btn.classList.add('hidden');
+
+      // 1) Quick local match on any known identity field
+      if (u && localAdminMatch(u)) {
+        btn.classList.remove('hidden');
+        return;
+      }
+
+      // 2) Server source of truth (same list as administrator-dashboard gate)
+      if (window.VV_ADMIN_URL && typeof VV_WORKER?.adminGet === 'function') {
+        try {
+          const probe = await VV_WORKER.adminGet('/admin/stats');
+          if (probe.ok) {
+            btn.classList.remove('hidden');
+            return;
+          }
+        } catch (e) {
+          console.warn('admin probe failed', e);
+        }
       }
     }
 
