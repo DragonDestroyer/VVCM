@@ -55,6 +55,9 @@
   </style>
 </head>
 <body class="vv-bg text-white min-h-full">
+  <div id="admin-gate" class="fixed inset-0 z-[100] bg-vv-blue-950 flex items-center justify-center p-6">
+    <p id="admin-gate-msg" class="text-white/50 text-sm">Checking administrator access…</p>
+  </div>
 
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -644,30 +647,65 @@
       renderReports();
     }
 
-    document.addEventListener('DOMContentLoaded', loadAdminDashboard);
   </script>
 
   <script>
-    
+    function denyAdminAccess(reason) {
+      const gate = document.getElementById('admin-gate');
+      const msg = document.getElementById('admin-gate-msg');
+      if (msg) {
+        msg.textContent = reason || 'You do not have administrator access.';
+        msg.className = 'text-red-400 text-sm text-center max-w-sm';
+      }
+      // Redirect away so non-admins cannot linger on the page
+      setTimeout(() => {
+        window.location.replace('dashboard.html');
+      }, 1200);
+    }
+
+    function allowAdminAccess() {
+      const gate = document.getElementById('admin-gate');
+      if (gate) gate.remove();
+    }
+
     function requireAdminSession() {
       const token = sessionStorage.getItem('vv_token');
       if (!token) {
-        window.location.href = 'index.html';
+        window.location.replace('index.html');
         return false;
       }
       return true;
     }
 
+    async function verifyAdminAccess() {
+      // Server is source of truth: ADMIN_NAMES / citizen.admin on vault-admin
+      if (!window.VV_ADMIN_URL || typeof VV_WORKER.adminGet !== 'function') {
+        denyAdminAccess('Admin API is not configured.');
+        return false;
+      }
+      const probe = await VV_WORKER.adminGet('/admin/stats');
+      if (probe.status === 401) {
+        denyAdminAccess('Sign in required.');
+        return false;
+      }
+      if (probe.status === 403 || (!probe.ok && probe.status === 403)) {
+        denyAdminAccess('Forbidden — only listed administrators can open this panel.');
+        return false;
+      }
+      if (!probe.ok) {
+        // Treat other failures as denied to avoid showing empty admin UI to random citizens
+        denyAdminAccess(probe.error || 'Could not verify administrator access.');
+        return false;
+      }
+      allowAdminAccess();
+      return true;
+    }
+
     async function loadAdminDashboard() {
       if (!requireAdminSession()) return;
-      if (!window.VV_ADMIN_URL) {
-        renderCitizens();
-        renderCompanies();
-        renderApplications();
-        renderContracts();
-        renderReports();
-        return;
-      }
+      const ok = await verifyAdminAccess();
+      if (!ok) return;
+
       const [cits, cos, apps, reps, stats] = await Promise.all([
         VV_WORKER.adminGet('/admin/citizens'),
         VV_WORKER.adminGet('/admin/companies'),
@@ -696,7 +734,12 @@
       renderContracts();
       renderReports();
     }
-    document.addEventListener('DOMContentLoaded', loadAdminDashboard);
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadAdminDashboard);
+    } else {
+      loadAdminDashboard();
+    }
   </script>
 
 </body>
