@@ -68,6 +68,49 @@
         <pre id="ol-meta" class="text-xs text-white/60 bg-vv-blue-950/80 rounded-xl p-4 overflow-x-auto">Loading…</pre>
       </section>
 
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-medium text-vv-green-400">Add citizen manually</h2>
+        <p class="text-xs text-white/45">
+          Creates or updates <code class="text-white/70">citizen:&lt;username&gt;</code> in KV. Username is the login key (lowercase). Discord user ID is required for verification DMs.
+        </p>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Display name</label>
+            <input id="add-display" type="text" placeholder="Apple"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/40" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Username</label>
+            <input id="add-username" type="text" placeholder="apple"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/40" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Discord user ID</label>
+            <input id="add-discord-id" type="text" inputmode="numeric" placeholder="123456789012345678"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/40" />
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Starting balance (optional)</label>
+            <input id="add-balance" type="number" step="0.01" value="0"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/40" />
+          </div>
+          <div class="flex items-end pb-1">
+            <label class="flex items-center gap-2 text-sm text-white/70">
+              <input type="checkbox" id="add-admin" class="rounded border-white/20" />
+              Grant admin flag
+            </label>
+          </div>
+        </div>
+        <button id="btn-add-citizen" type="button"
+                class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2.5 rounded-xl">
+          Save citizen to database
+        </button>
+        <pre id="add-out" class="text-xs text-white/55 bg-vv-blue-950/80 rounded-xl p-4 min-h-[3rem]"></pre>
+      </section>
+
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
         <h2 class="text-sm font-medium text-vv-green-400">Sync Discord role → citizens</h2>
         <p class="text-xs text-white/45">
@@ -194,6 +237,38 @@
     document.getElementById('ol-logout').onclick = () => {
       OL.token = '';
       showApp(false);
+    };
+
+
+    document.getElementById('btn-add-citizen').onclick = async () => {
+      const out = document.getElementById('add-out');
+      const displayName = document.getElementById('add-display').value.trim();
+      const username = document.getElementById('add-username').value.trim().toLowerCase();
+      const discordId = document.getElementById('add-discord-id').value.trim();
+      const balance = parseFloat(document.getElementById('add-balance').value);
+      const admin = document.getElementById('add-admin').checked;
+
+      if (!username) {
+        out.textContent = 'Username is required (used as the login key).';
+        return;
+      }
+      if (!discordId || !/^\d{5,}$/.test(discordId)) {
+        out.textContent = 'A valid numeric Discord user ID is required.';
+        return;
+      }
+
+      out.textContent = 'Saving…';
+      const body = {
+        username,
+        handle: username,
+        displayName: displayName || username,
+        discordId,
+        balance: Number.isFinite(balance) ? balance : 0,
+        admin,
+      };
+      const r = await OL.req('POST', '/overlord/citizen/set', body);
+      out.textContent = JSON.stringify(r.data, null, 2);
+      if (r.ok) refreshMeta();
     };
 
     document.getElementById('btn-sync').onclick = async () => {
