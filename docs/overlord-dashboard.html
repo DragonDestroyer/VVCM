@@ -15,7 +15,8 @@
           colors: {
             vv: {
               blue: { 950: '#020617', 900: '#0a1628', 800: '#0f2744', 700: '#163a5f', 500: '#1d6fb8', 400: '#3b8fd4', 300: '#6bb0e8' },
-              green: { 600: '#059669', 500: '#10b981', 400: '#34d399', 300: '#6ee7b7' }
+              green: { 600: '#059669', 500: '#10b981', 400: '#34d399', 300: '#6ee7b7' },
+              red: { 900: '#7F1D1D', 800: '#9B1C1C', 700: '#B91C1C', 500: '#DC2626', 400: '#F87171' }
             }
           }
         }
@@ -29,24 +30,24 @@
 </head>
 <body class="bg-vv-blue-950 text-white min-h-screen">
   <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-vv-blue-900/60 border border-amber-500/30 rounded-2xl p-6 space-y-4">
+    <div class="w-full max-w-sm bg-vv-blue-900/60 border border-[#9B1C1C]/60 rounded-2xl p-6 space-y-4 shadow-[0_0_40px_rgba(155,28,28,0.25)]">
       <div class="text-center">
-        <img src="vault-logo.png" alt="VAULT" class="h-10 mx-auto mb-3" />
-        <h1 class="text-lg font-semibold text-amber-300">Overlord access</h1>
+        <img src="overlord-logo.png" alt="VO Overlord" class="h-16 mx-auto mb-3 object-contain" />
+        <h1 class="text-lg font-semibold text-[#F87171]">Overlord access</h1>
         <p class="text-xs text-white/40 mt-1">Password login only · not Discord</p>
       </div>
       <div>
         <label class="text-xs text-white/40 uppercase tracking-wider">Username</label>
         <input id="ol-user" type="text" autocomplete="username"
-               class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+               class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9B1C1C]/50" />
       </div>
       <div>
         <label class="text-xs text-white/40 uppercase tracking-wider">Password</label>
         <input id="ol-pass" type="password" autocomplete="current-password"
-               class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+               class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9B1C1C]/50" />
       </div>
       <button id="ol-login" type="button"
-              class="w-full bg-amber-500 hover:bg-amber-400 text-vv-blue-950 font-semibold py-2.5 rounded-xl text-sm">
+              class="w-full bg-[#9B1C1C] hover:bg-[#7F1D1D] text-white font-semibold py-2.5 rounded-xl text-sm transition">
         Enter
       </button>
       <p id="ol-login-status" class="text-xs text-center text-white/40"></p>
@@ -54,11 +55,11 @@
   </div>
 
   <div id="app-view" class="hidden">
-    <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
+    <header class="border-b border-[#9B1C1C]/30 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
       <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <img src="vault-logo.png" alt="VAULT" class="h-7" />
-          <span class="text-xs uppercase tracking-wider text-amber-300/90 border border-amber-500/30 px-2 py-0.5 rounded-full">Overlord</span>
+          <img src="overlord-logo.png" alt="VO Overlord" class="h-10 w-auto object-contain">
+          <span class="text-xs uppercase tracking-wider text-[#F87171]/90 border border-[#9B1C1C]/60 px-2 py-0.5 rounded-full">Overlord</span>
         </div>
         <button id="ol-logout" type="button" class="text-xs text-white/40 hover:text-white">Sign out</button>
       </div>
@@ -66,7 +67,7 @@
 
     <main class="max-w-5xl mx-auto px-4 py-8 space-y-8">
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-3">
-        <h2 class="text-sm font-medium text-amber-300">System status</h2>
+        <h2 class="text-sm font-medium text-[#F87171]">System status</h2>
         <pre id="ol-meta" class="text-xs text-white/60 bg-vv-blue-950/80 rounded-xl p-4 overflow-x-auto">Loading…</pre>
       </section>
 
@@ -224,7 +225,7 @@
         });
         if (!r.ok) {
           status.textContent = r.data.error || 'Login failed';
-          status.className = 'text-xs text-center text-red-400';
+          status.className = 'text-xs text-center text-[#F87171]';
           return;
         }
         OL.token = r.data.token;
@@ -232,7 +233,7 @@
         refreshMeta();
       } catch (e) {
         status.textContent = e.message || String(e);
-        status.className = 'text-xs text-center text-red-400';
+        status.className = 'text-xs text-center text-[#F87171]';
       }
     };
 

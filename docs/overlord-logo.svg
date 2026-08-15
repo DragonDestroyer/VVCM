@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" width="560" height="300">
+  <rect width="560" height="300" fill="#000000"/>
+  <!-- lower V behind O -->
+  <polygon fill="#34d399" points="135,158 168,158 150,288 112,288"/>
+  <polygon fill="#93c5fd" points="152,158 180,158 160,255 140,255"/>
+  <polygon fill="#34d399" points="168,158 205,158 180,288 150,288"/>
+  <!-- red O middle -->
+  <circle cx="340" cy="150" r="118" fill="none" stroke="#9B1C1C" stroke-width="40"/>
+  <!-- upper V in front -->
+  <polygon fill="#34d399" points="42,18 98,18 158,158 118,158"/>
+  <polygon fill="#93c5fd" points="98,18 126,18 172,122 150,122"/>
+  <polygon fill="#93c5fd" points="150,122 172,122 182,158 160,158"/>
+  <polygon fill="#34d399" points="218,18 274,18 182,158 142,158"/>
+</svg>
