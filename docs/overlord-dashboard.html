@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overlord · VAULT</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            vv: {
+              blue: { 950: '#020617', 900: '#0a1628', 800: '#0f2744', 700: '#163a5f', 500: '#1d6fb8', 400: '#3b8fd4', 300: '#6bb0e8' },
+              green: { 600: '#059669', 500: '#10b981', 400: '#34d399', 300: '#6ee7b7' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="api.js"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  </style>
+</head>
+<body class="bg-vv-blue-950 text-white min-h-screen">
+  <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-vv-blue-900/60 border border-amber-500/30 rounded-2xl p-6 space-y-4">
+      <div class="text-center">
+        <img src="vault-logo.png" alt="VAULT" class="h-10 mx-auto mb-3" />
+        <h1 class="text-lg font-semibold text-amber-300">Overlord access</h1>
+        <p class="text-xs text-white/40 mt-1">Password login only · not Discord</p>
+      </div>
+      <div>
+        <label class="text-xs text-white/40 uppercase tracking-wider">Username</label>
+        <input id="ol-user" type="text" autocomplete="username"
+               class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+      </div>
+      <div>
+        <label class="text-xs text-white/40 uppercase tracking-wider">Password</label>
+        <input id="ol-pass" type="password" autocomplete="current-password"
+               class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+      </div>
+      <button id="ol-login" type="button"
+              class="w-full bg-amber-500 hover:bg-amber-400 text-vv-blue-950 font-semibold py-2.5 rounded-xl text-sm">
+        Enter
+      </button>
+      <p id="ol-login-status" class="text-xs text-center text-white/40"></p>
+    </div>
+  </div>
+
+  <div id="app-view" class="hidden">
+    <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
+      <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="vault-logo.png" alt="VAULT" class="h-7" />
+          <span class="text-xs uppercase tracking-wider text-amber-300/90 border border-amber-500/30 px-2 py-0.5 rounded-full">Overlord</span>
+        </div>
+        <button id="ol-logout" type="button" class="text-xs text-white/40 hover:text-white">Sign out</button>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-3">
+        <h2 class="text-sm font-medium text-amber-300">System status</h2>
+        <pre id="ol-meta" class="text-xs text-white/60 bg-vv-blue-950/80 rounded-xl p-4 overflow-x-auto">Loading…</pre>
+      </section>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-medium text-vv-green-400">Sync Discord role → citizens</h2>
+        <p class="text-xs text-white/45">
+          Pulls every non-bot member with the citizen role into <code class="text-white/70">vvcm-auth</code>.
+          Does not reset existing balances. For near–real-time coverage, add a Cron Trigger on the Worker (e.g. every 5 minutes).
+          True instant “on role grant” needs a Discord Gateway listener (not available as a pure Worker HTTP route).
+        </p>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs text-white/40">Guild ID (optional if set on Worker)</label>
+            <input id="sync-guild" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="from env" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40">Role ID (optional if set on Worker)</label>
+            <input id="sync-role" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="from env" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40">Default balance for new citizens</label>
+            <input id="sync-bal" type="number" value="0" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+        <button id="btn-sync" type="button" class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2 rounded-xl">
+          Run sync now
+        </button>
+        <pre id="sync-out" class="text-xs text-white/55 bg-vv-blue-950/80 rounded-xl p-4 min-h-[3rem]"></pre>
+      </section>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-medium text-vv-blue-300">Import UnbelievaBoat balances</h2>
+        <p class="text-xs text-white/45">
+          Reads the UnbelievaBoat guild leaderboard via their API and writes totals into VAULT citizens matched by Discord user ID.
+          Set <code class="text-white/70">UNB_TOKEN</code> on the Worker. Use dry-run first.
+        </p>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs text-white/40">UNB Guild ID</label>
+            <input id="unb-guild" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="same as Discord usually" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40">Mode</label>
+            <select id="unb-mode" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm">
+              <option value="set">Set balance = UNB total</option>
+              <option value="add">Add UNB total to current</option>
+            </select>
+          </div>
+          <div class="flex items-end gap-2">
+            <label class="flex items-center gap-2 text-sm text-white/70 pb-2">
+              <input type="checkbox" id="unb-dry" checked class="rounded" /> Dry run
+            </label>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-unb" type="button" class="bg-vv-blue-500 hover:bg-vv-blue-400 text-white font-semibold text-sm px-4 py-2 rounded-xl">
+            Import from UnbelievaBoat
+          </button>
+        </div>
+        <pre id="unb-out" class="text-xs text-white/55 bg-vv-blue-950/80 rounded-xl p-4 min-h-[3rem] max-h-80 overflow-auto"></pre>
+      </section>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-medium text-white/70">KV debug</h2>
+        <div class="flex gap-2">
+          <input id="kv-key" placeholder="citizen:dragon_destroyer" class="flex-1 bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" />
+          <button id="btn-kv" type="button" class="text-sm border border-white/15 px-4 py-2 rounded-xl hover:border-vv-green-500/40">Get</button>
+        </div>
+        <pre id="kv-out" class="text-xs text-white/55 bg-vv-blue-950/80 rounded-xl p-4 min-h-[3rem]"></pre>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const OL = {
+      get token() { return sessionStorage.getItem('vv_overlord_token') || ''; },
+      set token(v) { if (v) sessionStorage.setItem('vv_overlord_token', v); else sessionStorage.removeItem('vv_overlord_token'); },
+      base() { return (window.VV_ADMIN_URL || '').replace(/\/$/, ''); },
+      async req(method, path, body) {
+        const base = this.base();
+        if (!base) throw new Error('VV_ADMIN_URL not set in api.js');
+        const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+        if (this.token) headers.Authorization = 'Bearer ' + this.token;
+        const res = await fetch(base + path, {
+          method,
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+        const data = await res.json().catch(() => ({}));
+        return { ok: res.ok, status: res.status, data };
+      }
+    };
+
+    function showApp(on) {
+      document.getElementById('login-view').classList.toggle('hidden', on);
+      document.getElementById('app-view').classList.toggle('hidden', !on);
+    }
+
+    async function refreshMeta() {
+      const r = await OL.req('GET', '/overlord/debug/sessions');
+      document.getElementById('ol-meta').textContent = JSON.stringify(r.data, null, 2);
+    }
+
+    document.getElementById('ol-login').onclick = async () => {
+      const status = document.getElementById('ol-login-status');
+      status.textContent = 'Checking…';
+      status.className = 'text-xs text-center text-white/40';
+      try {
+        const r = await OL.req('POST', '/overlord/login', {
+          username: document.getElementById('ol-user').value.trim(),
+          password: document.getElementById('ol-pass').value,
+        });
+        if (!r.ok) {
+          status.textContent = r.data.error || 'Login failed';
+          status.className = 'text-xs text-center text-red-400';
+          return;
+        }
+        OL.token = r.data.token;
+        showApp(true);
+        refreshMeta();
+      } catch (e) {
+        status.textContent = e.message || String(e);
+        status.className = 'text-xs text-center text-red-400';
+      }
+    };
+
+    document.getElementById('ol-logout').onclick = () => {
+      OL.token = '';
+      showApp(false);
+    };
+
+    document.getElementById('btn-sync').onclick = async () => {
+      const out = document.getElementById('sync-out');
+      out.textContent = 'Syncing…';
+      const body = {
+        defaultBalance: parseFloat(document.getElementById('sync-bal').value) || 0,
+      };
+      const g = document.getElementById('sync-guild').value.trim();
+      const role = document.getElementById('sync-role').value.trim();
+      if (g) body.guildId = g;
+      if (role) body.roleId = role;
+      const r = await OL.req('POST', '/overlord/sync-role', body);
+      out.textContent = JSON.stringify(r.data, null, 2);
+      refreshMeta();
+    };
+
+    document.getElementById('btn-unb').onclick = async () => {
+      const out = document.getElementById('unb-out');
+      out.textContent = 'Importing…';
+      const body = {
+        mode: document.getElementById('unb-mode').value,
+        dryRun: document.getElementById('unb-dry').checked,
+      };
+      const g = document.getElementById('unb-guild').value.trim();
+      if (g) body.guildId = g;
+      const r = await OL.req('POST', '/overlord/import-unb', body);
+      out.textContent = JSON.stringify(r.data, null, 2);
+    };
+
+    document.getElementById('btn-kv').onclick = async () => {
+      const key = document.getElementById('kv-key').value.trim();
+      const r = await OL.req('GET', '/overlord/debug/kv?key=' + encodeURIComponent(key));
+      document.getElementById('kv-out').textContent = JSON.stringify(r.data, null, 2);
+    };
+
+    // auto-enter if session exists
+    (async () => {
+      if (!OL.token) return;
+      const r = await OL.req('GET', '/overlord/me');
+      if (r.ok) {
+        showApp(true);
+        refreshMeta();
+      } else {
+        OL.token = '';
+      }
+    })();
+  </script>
+</body>
+</html>
