@@ -237,7 +237,23 @@
             </div>
           </section>
 
-          <!-- 6. Application message -->
+          <!-- 6. Funding -->
+          <section class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Your personal contribution (Ꝟ)</label>
+              <input type="number" id="co-personal-funds" min="0" step="0.01" value="0" placeholder="0"
+                     class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+              <p class="text-xs text-white/30 mt-1.5">Taken from your balance when you apply (held until approved or refunded if rejected).</p>
+            </div>
+            <div>
+              <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">City starting funds requested (Ꝟ)</label>
+              <input type="number" id="co-requested" min="0" step="0.01" value="0" placeholder="0"
+                     class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+              <p class="text-xs text-white/30 mt-1.5">Optional extra capital you are asking administrators to sanction.</p>
+            </div>
+          </section>
+
+          <!-- 7. Application message -->
           <section>
             <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Application to administrators</label>
             <textarea id="co-application" rows="4"
@@ -290,20 +306,21 @@
 
             <div>
               <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Amount (Vidiadollars)</label>
-              <input type="text" placeholder="0.00"
+              <input type="number" id="pay-amount" min="0.01" step="0.01" placeholder="0.00"
                      class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
             </div>
 
             <div>
               <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Note <span class="text-white/30">(optional)</span></label>
-              <input type="text" placeholder="What’s this for?"
+              <input type="text" id="pay-note" placeholder="What’s this for?"
                      class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
             </div>
 
-            <button type="submit"
+            <button type="button" id="btn-send-pay"
                     class="w-full bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold py-3 rounded-xl transition">
               Send payment
             </button>
+            <p id="pay-status" class="text-sm text-center text-white/40 hidden"></p>
           </form>
         </section>
 
@@ -338,6 +355,8 @@
     }
 
     /* ---------- Pay panel (existing) ---------- */
+    let selectedPayUsername = '';
+
     function filterCitizens(query) {
       const dropdown = document.getElementById('citizen-dropdown');
       if (!query.trim()) {
@@ -345,28 +364,77 @@
         return;
       }
       const q = query.toLowerCase();
-      const matches = citizens
-        .map(name => ({ name, score: name.toLowerCase().startsWith(q) ? 2 : name.toLowerCase().includes(q) ? 1 : 0 }))
+      const matches = (citizens || [])
+        .map(c => {
+          const label = c.displayName || c.name || c.username || '';
+          const user = c.username || '';
+          const hay = (label + ' ' + user + ' ' + (c.handle || '')).toLowerCase();
+          const score = label.toLowerCase().startsWith(q) || user.startsWith(q) ? 2 : hay.includes(q) ? 1 : 0;
+          return { ...c, label, user, score };
+        })
         .filter(m => m.score > 0)
-        .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+        .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
 
       if (matches.length === 0) {
         dropdown.innerHTML = '<li class="px-4 py-3 text-sm text-white/40">No citizens found</li>';
       } else {
         dropdown.innerHTML = matches.map(m =>
           `<li class="px-4 py-2.5 text-sm hover:bg-vv-green-500/10 cursor-pointer transition"
-               onclick="selectCitizen('${m.name}')">${m.name}</li>`
+               onclick="selectCitizen(${JSON.stringify(m.user)}, ${JSON.stringify(m.label)})">${m.label} <span class="text-white/30 text-xs">${m.user}</span></li>`
         ).join('');
       }
       dropdown.classList.remove('hidden');
     }
 
-    function selectCitizen(name) {
-      document.getElementById('pay-search').value = name;
+    function selectCitizen(username, label) {
+      selectedPayUsername = username;
+      document.getElementById('pay-search').value = label || username;
       document.getElementById('citizen-dropdown').classList.add('hidden');
       const el = document.getElementById('selected-citizen');
-      el.textContent = 'Sending to: ' + name;
-      el.classList.remove('hidden');
+      if (el) {
+        el.textContent = 'Sending to: ' + (label || username) + ' (@' + username + ')';
+        el.classList.remove('hidden');
+      }
+    }
+
+    async function sendPayment() {
+      const status = document.getElementById('pay-status');
+      const amount = parseFloat(document.getElementById('pay-amount').value);
+      const note = document.getElementById('pay-note').value.trim();
+      const to = selectedPayUsername || document.getElementById('pay-search').value.trim().toLowerCase();
+      if (!to) {
+        status.textContent = 'Select a recipient.';
+        status.className = 'text-sm text-center text-amber-300';
+        status.classList.remove('hidden');
+        return;
+      }
+      if (!(amount > 0)) {
+        status.textContent = 'Enter a valid amount.';
+        status.className = 'text-sm text-center text-amber-300';
+        status.classList.remove('hidden');
+        return;
+      }
+      status.textContent = 'Sending…';
+      status.className = 'text-sm text-center text-white/40';
+      status.classList.remove('hidden');
+      const res = await VV_WORKER.post('/ledger/transfer', {
+        toUsername: to,
+        amount,
+        note: note || 'Transfer',
+      });
+      if (!res.ok) {
+        status.textContent = res.error || res.data?.error || 'Transfer failed';
+        status.className = 'text-sm text-center text-red-400';
+        return;
+      }
+      status.textContent = 'Sent ' + money(amount).replace(/<[^>]+>/g, '') + ' successfully.';
+      status.className = 'text-sm text-center text-vv-green-400';
+      if (res.data?.balance != null) {
+        setMoneyEl(document.getElementById('account-balance'), res.data.balance);
+        setMoneyEl(document.getElementById('pay-balance'), res.data.balance);
+      }
+      document.getElementById('pay-amount').value = '';
+      document.getElementById('pay-note').value = '';
     }
 
     /* ---------- Create company form ---------- */
@@ -429,7 +497,7 @@
       alert('Application saved as a draft. You can come back and edit it later.');
     }
 
-    function applyCompanyForm() {
+    async function applyCompanyForm() {
       const name = document.getElementById('co-name').value.trim();
       if (!name) {
         alert('Company name is required before applying.');
@@ -437,11 +505,22 @@
         return;
       }
       const data = collectCompanyForm();
-      // UI-only for now — later: POST to /api/company-apply
-      console.log('Company application submitted:', data);
-      alert('Application submitted to administrators for review.\nThey will sanction starting funds if approved.');
-      clearCompanyForm();
-      closeCreateCompany(true);
+      try {
+        const res = await VV_WORKER.post('/companies/apply', data);
+        if (!res.ok) {
+          alert(res.error || res.data?.error || 'Application failed');
+          return;
+        }
+        if (res.data?.balance != null) {
+          setMoneyEl(document.getElementById('account-balance'), res.data.balance);
+          setMoneyEl(document.getElementById('pay-balance'), res.data.balance);
+        }
+        alert('Application submitted to administrators for review.\nPersonal contribution is held until approval.');
+        clearCompanyForm();
+        closeCreateCompany(true);
+      } catch (e) {
+        alert(e.message || String(e));
+      }
     }
 
     function collectJobFromRow(row) {
@@ -482,6 +561,8 @@
         coOwners: [...coOwners],
         departments,
         application: document.getElementById('co-application').value.trim(),
+        personalFunds: parseFloat(document.getElementById('co-personal-funds')?.value) || 0,
+        requested: parseFloat(document.getElementById('co-requested')?.value) || 0,
         hasLogo: !document.getElementById('logo-preview').classList.contains('hidden'),
       };
     }
@@ -856,6 +937,7 @@
 
     async function loadDashboard() {
       if (!requireSession()) return;
+      document.getElementById('btn-send-pay')?.addEventListener('click', sendPayment);
 
       // optimistic paint from login payload
       try {
@@ -911,7 +993,7 @@
 
       const cit = await VV_WORKER.get('/citizens');
       if (cit.ok && cit.data && Array.isArray(cit.data.items)) {
-        citizens = cit.data.items.map(c => c.displayName || c.name).filter(Boolean);
+        citizens = cit.data.items || [];
       }
     }
 

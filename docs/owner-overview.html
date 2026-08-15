@@ -1285,7 +1285,7 @@
       renderPendingContracts();
     }
 
-    function sendContract(e) {
+    async function sendContract(e) {
       e.preventDefault();
       const target = document.getElementById('contract-target').value;
       const duration = parseInt(document.getElementById('contract-duration').value, 10);
@@ -1296,15 +1296,15 @@
         return false;
       }
       const proposal = {
-        id: 'c_out_' + Date.now(),
         targetType: contractTargetType,
         target,
         payType: contractPayType,
         duration,
         unit,
         description,
-        sentAt: Date.now(),
-        expiresAt: Date.now() + 72 * 3600 * 1000,
+        companyId: (typeof COMPANY !== 'undefined' && COMPANY.id) || null,
+        companyName: (typeof COMPANY !== 'undefined' && COMPANY.name) || null,
+        access: typeof getSelectedAccess === 'function' ? getSelectedAccess() : [],
       };
       if (contractPayType === 'hourly') {
         const rate = parseFloat(document.getElementById('contract-hourly').value);
@@ -1315,17 +1315,34 @@
         if (!total || total <= 0) { alert('Enter a valid total amount.'); return false; }
         proposal.total = total;
       }
-      proposal.access = getSelectedAccess();
-      pendingOutgoing.unshift(proposal);
-      exportToDatabase('contract_proposal', proposal);
+
       const st = document.getElementById('contract-send-status');
-      st.textContent = 'Proposal sent to ' + target + '. They have 72 hours to accept.';
+      st.textContent = 'Sending proposal…';
       st.classList.remove('hidden');
-      document.getElementById('contract-form').reset();
-      document.getElementById('contract-access-list').classList.add('hidden');
-      setPayType('hourly');
-      setContractTargetType(contractTargetType);
-      setTimeout(() => st.classList.add('hidden'), 5000);
+      st.className = 'text-sm text-white/50';
+
+      try {
+        if (!window.VV_WORKER || typeof VV_WORKER.post !== 'function') {
+          throw new Error('API client not loaded');
+        }
+        const res = await VV_WORKER.post('/contracts', proposal);
+        if (!res.ok) {
+          st.textContent = res.error || (res.data && res.data.error) || 'Failed to send contract';
+          st.className = 'text-sm text-red-400';
+          return false;
+        }
+        if (typeof pendingOutgoing !== 'undefined') pendingOutgoing.unshift(res.data.contract || proposal);
+        st.textContent = 'Proposal sent to ' + target + '. They have 72 hours to accept.';
+        st.className = 'text-sm text-vv-green-400';
+        document.getElementById('contract-form').reset();
+        document.getElementById('contract-access-list')?.classList.add('hidden');
+        setPayType('hourly');
+        setContractTargetType(contractTargetType);
+        setTimeout(() => st.classList.add('hidden'), 5000);
+      } catch (err) {
+        st.textContent = err.message || String(err);
+        st.className = 'text-sm text-red-400';
+      }
       return false;
     }
 

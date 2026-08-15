@@ -566,9 +566,12 @@
               <h3 class="text-lg font-semibold">${a.name}</h3>
               <p class="text-sm text-white/45">Applicant · ${a.applicant} · ${a.submitted}</p>
             </div>
-            <div class="text-sm font-mono text-vv-green-400">Seed Ꝟ${a.capital.toLocaleString()}</div>
+            <div class="text-right text-sm space-y-1">
+              <div class="font-mono text-vv-green-400">Personal Ꝟ${Number(a.personalFunds||0).toLocaleString()}</div>
+              <div class="font-mono text-white/50">Requested Ꝟ${Number(a.requested||0).toLocaleString()}</div>
+            </div>
           </div>
-          <p class="text-sm text-white/65 mb-4">${a.message}</p>
+          <p class="text-sm text-white/65 mb-4">${a.message || '—'}</p>
           <div class="flex flex-wrap gap-2">
             <button type="button" onclick="decideApplication('${a.id}', true)"
                     class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2 rounded-xl transition">Approve &amp; fund</button>
@@ -579,25 +582,29 @@
       `).join('');
     }
 
-    function decideApplication(id, approve) {
+    async function decideApplication(id, approve) {
       const idx = APPLICATIONS.findIndex(a => a.id === id);
       if (idx < 0) return;
       const app = APPLICATIONS[idx];
+      const res = await VV_WORKER.adminPost('/admin/application/decide', {
+        id,
+        decision: approve ? 'approve' : 'reject',
+        sanction: approve ? Number(app.requested || 0) : 0,
+      });
+      if (!res.ok) {
+        alert(res.error || (res.data && res.data.error) || 'Decision failed');
+        return;
+      }
       APPLICATIONS.splice(idx, 1);
-      exportToDatabase(approve ? 'company_app_approved' : 'company_app_rejected', app);
       if (approve) {
-        COMPANIES.unshift({
-          name: app.name,
-          owner: app.applicant,
-          balance: app.capital,
-          staff: 1,
-          status: 'Active',
-          href: '#',
-        });
+        const cos = await VV_WORKER.adminGet('/admin/companies');
+        if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
         renderCompanies();
       }
       renderApplications();
-      alert(approve ? (app.name + ' approved. Starting capital sanctioned.') : (app.name + ' rejected.'));
+      alert(approve
+        ? ((app.companyName || app.name) + ' approved.')
+        : ((app.companyName || app.name) + ' rejected.'));
     }
 
     function renderContracts() {
