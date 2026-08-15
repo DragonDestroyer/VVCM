@@ -126,6 +126,24 @@
           </div>
         </section>
       </div>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 mt-6" id="contracts-panel">
+        <h3 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Contracts</h3>
+        <div class="space-y-4">
+          <div>
+            <h4 class="text-xs text-white/40 mb-2">Incoming (awaiting your response)</h4>
+            <ul id="dash-incoming-contracts" class="space-y-2 text-sm text-white/40"><li>Loading…</li></ul>
+          </div>
+          <div>
+            <h4 class="text-xs text-white/40 mb-2">Outgoing</h4>
+            <ul id="dash-outgoing-contracts" class="space-y-2 text-sm text-white/40"><li>Loading…</li></ul>
+          </div>
+          <div>
+            <h4 class="text-xs text-white/40 mb-2">Active</h4>
+            <ul id="dash-active-contracts" class="space-y-2 text-sm text-white/40"><li>Loading…</li></ul>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- ========== COMPANIES PANEL ========== -->
@@ -934,6 +952,82 @@
         }
       }
     }
+
+    
+      async function loadDashContracts() {
+        const res = await VV_WORKER.get('/contracts');
+        const inc = document.getElementById('dash-incoming-contracts');
+        const out = document.getElementById('dash-outgoing-contracts');
+        const act = document.getElementById('dash-active-contracts');
+        if (!res.ok) {
+          if (inc) inc.innerHTML = '<li class="text-white/40">Could not load contracts.</li>';
+          return;
+        }
+        const pending = res.data.pending || [];
+        const active = res.data.active || [];
+        const me = (window.VV_CURRENT_USER || '').toLowerCase();
+        // pending may be incoming or outgoing - listMyContracts already filters to mine
+        // Split: if target matches me → incoming; if from matches → outgoing
+        // listMyContracts returns all related pending; we need from field
+        const incoming = pending.filter(c => String(c.target || '').toLowerCase() === me || String(c.target || '').toLowerCase() === String(sessionStorage.getItem('vv_username') || '').toLowerCase());
+        const outgoing = pending.filter(c => !incoming.includes(c));
+        // Better: use username from /me
+        const myUser = (window.VV_ME_USERNAME || me || '').toLowerCase();
+        const incList = pending.filter(c => {
+          const t = String(c.target || '').toLowerCase();
+          return t === myUser || t === me;
+        });
+        const outList = pending.filter(c => String(c.from || '').toLowerCase() === myUser || String(c.from || '').toLowerCase() === me);
+        // if both empty, show all pending as actionable if target-ish
+        const finalInc = incList.length ? incList : pending.filter(c => String(c.from || '').toLowerCase() !== myUser);
+        const finalOut = outList.length ? outList : pending.filter(c => String(c.from || '').toLowerCase() === myUser);
+
+        function payLab(c) {
+          if (c.payType === 'hourly') return 'Ꝟ' + c.rate + '/h';
+          return 'Ꝟ' + Number(c.total || 0).toFixed(2) + ' total';
+        }
+
+        if (inc) {
+          inc.innerHTML = finalInc.length ? finalInc.map(c => `
+            <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3">
+              <div class="font-medium text-white">From ${c.from || '—'}</div>
+              <div class="text-white/50 mt-1">${c.description || ''}</div>
+              <div class="text-xs text-white/35 mt-1 mb-2">${payLab(c)} · ${c.duration || ''} ${c.unit || ''}</div>
+              <div class="flex gap-2">
+                <button type="button" class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 text-xs font-semibold px-3 py-1.5 rounded-lg" onclick="dashRespondContract('${c.id}', true)">Accept</button>
+                <button type="button" class="border border-white/15 text-xs px-3 py-1.5 rounded-lg hover:border-red-400/40" onclick="dashRespondContract('${c.id}', false)">Decline</button>
+              </div>
+            </li>`).join('') : '<li class="text-white/40">No incoming proposals.</li>';
+        }
+        if (out) {
+          out.innerHTML = finalOut.length ? finalOut.map(c => `
+            <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3">
+              <div class="font-medium text-white">To ${c.target || '—'}</div>
+              <div class="text-white/50 mt-1">${c.description || ''}</div>
+              <div class="text-xs text-white/35 mt-1">${payLab(c)}</div>
+            </li>`).join('') : '<li class="text-white/40">No outgoing proposals.</li>';
+        }
+        if (act) {
+          act.innerHTML = active.length ? active.map(c => `
+            <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3">
+              <a href="contract-overview?id=${encodeURIComponent(c.id)}" class="hover:text-vv-green-400">
+                <div class="font-medium text-white">${c.description || c.id}</div>
+                <div class="text-xs text-white/35 mt-1">${c.from || ''} → ${c.target || ''} · ${payLab(c)}</div>
+              </a>
+            </li>`).join('') : '<li class="text-white/40">No active contracts.</li>';
+        }
+      }
+
+      window.dashRespondContract = async function(id, accept) {
+        const res = await VV_WORKER.post('/contracts/' + encodeURIComponent(id) + '/respond', {
+          decision: accept ? 'accept' : 'decline',
+        });
+        if (!res.ok) {
+          alert(res.error || (res.data && res.data.error) || 'Failed');
+          return;
+        }
+        await loadDashContracts();
+      };
 
     async function loadDashboard() {
       if (!requireSession()) return;

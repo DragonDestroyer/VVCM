@@ -214,23 +214,7 @@
               <th class="px-4 py-3 font-medium text-right">Amount</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-white/5">
-            <tr>
-              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 5</td>
-              <td class="px-4 py-3 text-white/70">Shift pay · 8h @ Ꝟ24</td>
-              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+Ꝟ192.00</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 3</td>
-              <td class="px-4 py-3 text-white/70">Shift pay · 6h @ Ꝟ24</td>
-              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+Ꝟ144.00</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-3 text-white/40 whitespace-nowrap">Aug 1</td>
-              <td class="px-4 py-3 text-white/70">Shift pay · 8h @ Ꝟ20 <span class="text-white/35">(before project)</span></td>
-              <td class="px-4 py-3 text-right font-mono text-vv-green-400">+Ꝟ160.00</td>
-            </tr>
-          </tbody>
+          <tbody class="divide-y divide-white/5"><tr><td colspan="3" class="px-4 py-6 text-center text-white/40 text-sm">No pay history yet.</td></tr></tbody>
         </table>
       </section>
       <p class="text-xs text-white/30 text-center">Company balance and full ledger are not available on worker view.</p>
@@ -338,6 +322,25 @@
       }
 
       // Soft-replace leftover template brand text
+      // personal activity as pay history
+      try {
+        const act = await VV_WORKER.get('/me/activity');
+        const tbody = document.querySelector('#panel-ledger tbody');
+        if (tbody && act.ok && act.data && act.data.items) {
+          const items = act.data.items;
+          tbody.innerHTML = items.length ? items.map(i => {
+            const amt = Number(i.amount) || 0;
+            const cls = amt >= 0 ? 'text-vv-green-400' : 'text-red-400';
+            const sign = amt >= 0 ? '+' : '−';
+            return `<tr>
+              <td class="px-4 py-3 text-white/40 whitespace-nowrap">${i.when || ''}</td>
+              <td class="px-4 py-3 text-white/70">${i.label || ''}</td>
+              <td class="px-4 py-3 text-right font-mono ${cls}">${sign}Ꝟ${Math.abs(amt).toLocaleString()}</td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="3" class="px-4 py-6 text-center text-white/40 text-sm">No pay history yet.</td></tr>';
+        }
+      } catch (_) {}
+
       document.querySelectorAll('body *').forEach(el => {
         if (el.children.length === 0 && el.textContent && el.textContent.includes('Vidia Motors')) {
           el.textContent = el.textContent.replace(/Vidia Motors/g, c.name || 'Company');
