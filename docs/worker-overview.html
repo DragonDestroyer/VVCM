@@ -72,8 +72,8 @@
         <a href="administrator-dashboard" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
            title="Administrator panel">Admin Panel</a>
 
-        <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
-        <span class="text-sm text-white/70 hidden sm:inline">Dragon_Destroyer</span>
+        <img id="header-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
+        <span id="header-name" class="text-sm text-white/70 hidden sm:inline">—</span>
         <a href="index.html" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
       </div>
     </div>
@@ -89,24 +89,24 @@
     <!-- Company hero — salary instead of company balance -->
     <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6 mb-8">
       <div class="flex flex-col sm:flex-row sm:items-start gap-5">
-        <div class="w-20 h-20 rounded-2xl bg-vv-green-500/15 border border-vv-green-500/30 flex items-center justify-center text-vv-green-400 font-bold text-2xl shrink-0">
-          RC
+        <div id="company-logo" class="w-20 h-20 rounded-2xl bg-vv-green-500/15 border border-vv-green-500/30 flex items-center justify-center text-vv-green-400 font-bold text-2xl shrink-0">
+          —
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-2 mb-1">
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Vidia Motors</h1>
-            <span class="text-xs bg-vv-green-500/15 text-vv-green-400 px-2 py-0.5 rounded-full">Sales Associate</span>
-            <span class="text-xs bg-white/5 text-white/50 px-2 py-0.5 rounded-full">Sales Floor</span>
+            <h1 id="company-name" class="text-2xl sm:text-3xl font-bold tracking-tight">Loading…</h1>
+            <span id="worker-role-badge" class="text-xs bg-vv-green-500/15 text-vv-green-400 px-2 py-0.5 rounded-full">—</span>
+            <span id="worker-dept-badge" class="text-xs bg-white/5 text-white/50 px-2 py-0.5 rounded-full">—</span>
           </div>
-          <p class="text-white/50 text-sm leading-relaxed max-w-xl">
-            Vehicle dealership serving citizens of VidiaVille — sales, trade-ins, and service packages.
+          <p id="company-desc" class="text-white/50 text-sm leading-relaxed max-w-xl">
+            Loading workplace…
           </p>
-          <p class="text-xs text-white/30 mt-2">Your department only · roster limited to Sales Floor</p>
+          <p class="text-xs text-white/30 mt-2">Your department only · company balance hidden</p>
         </div>
         <div class="sm:text-right shrink-0 bg-vv-blue-950/50 border border-white/5 rounded-xl px-5 py-4 min-w-[11rem]">
           <div class="text-xs text-white/40 uppercase tracking-wider">Your rate</div>
           <div class="text-2xl font-bold text-vv-green-400 font-mono mt-0.5" id="worker-rate">—</div>
-          <div class="text-xs text-white/35 mt-1">Base Ꝟ20 · <span class="text-vv-green-400/90">+Ꝟ4 project</span></div>
+          <div class="text-xs text-white/35 mt-1" id="worker-rate-note">Vidiadollars / hour</div>
         </div>
       </div>
     </section>
@@ -179,7 +179,7 @@
     <div id="panel-roster" class="panel space-y-6">
       <section>
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Sales Floor</h2>
+          <h2 id="roster-dept-title" class="text-sm font-medium text-white/50 uppercase tracking-wider">Department</h2>
           <span class="text-xs text-white/30">Your department</span>
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
@@ -191,23 +191,8 @@
                 <th class="px-4 py-3 font-medium">Rate</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-white/5">
-              <tr class="hover:bg-white/[0.02] bg-vv-green-500/5">
-                <td class="px-4 py-3">
-                  <div class="font-medium">Dragon_Destroyer <span class="text-xs text-vv-green-400">(you)</span></div>
-                  <div class="text-xs text-white/35">@dragon_destroyer</div>
-                </td>
-                <td class="px-4 py-3">Sales Associate</td>
-                <td class="px-4 py-3 font-mono text-vv-green-400">—</td>
-              </tr>
-              <tr class="hover:bg-white/[0.02]">
-                <td class="px-4 py-3">
-                  <div class="font-medium">Vinco</div>
-                  <div class="text-xs text-white/35">@vincofoods</div>
-                </td>
-                <td class="px-4 py-3">Floor Lead</td>
-                <td class="px-4 py-3 font-mono text-vv-green-400">—</td>
-              </tr>
+            <tbody id="roster-tbody" class="divide-y divide-white/5">
+              <tr><td colspan="3" class="px-4 py-6 text-center text-white/40 text-sm">Loading roster…</td></tr>
             </tbody>
           </table>
         </div>
@@ -219,7 +204,7 @@
     <div id="panel-ledger" class="panel space-y-6">
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
         <div class="px-4 py-3 border-b border-white/5">
-          <h2 class="text-sm font-medium text-white/60">Your recent pay from Vidia Motors</h2>
+          <h2 class="text-sm font-medium text-white/60">Your recent pay</h2>
         </div>
         <table class="w-full text-sm">
           <thead class="bg-vv-blue-950/50 text-white/40 text-left">
@@ -253,7 +238,7 @@
   </main>
 
   <footer class="py-8 text-center text-white/20 text-xs tracking-wider">
-    VAULT · Launch v1 · Vidia Motors · Worker
+    VAULT · Launch v1 · Worker
   </footer>
 
   <script>
@@ -267,29 +252,97 @@
 
   <script>
     // Admin panel access — only these citizens see the header control
-    window.VV_ADMIN_PANEL_ACCESS = ['Dragon_Destroyer', 'Apple'];
-    window.VV_CURRENT_USER = window.VV_CURRENT_USER || 'Dragon_Destroyer';
-    (function showAdminPanelButton() {
-      const btn = document.getElementById('admin-panel-btn');
-      if (!btn) return;
-      const allowed = window.VV_ADMIN_PANEL_ACCESS.map(n => n.toLowerCase());
-      if (allowed.includes(String(window.VV_CURRENT_USER).toLowerCase())) {
-        btn.classList.remove('hidden');
-      }
-    })();
+    window.VV_ADMIN_PANEL_ACCESS = ['Dragon_Destroyer', 'dragon_destroyer', 'Apple', 'apple'];
+    // Visibility refined after /me in loadWorkerOverview via admin probe if needed
   </script>
 
 
   <script>
+    function initials(name) {
+      return String(name || '?')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(w => w[0].toUpperCase())
+        .join('') || '?';
+    }
+
+    function moneyText(n) {
+      if (n == null || n === '' || !Number.isFinite(Number(n))) return '—';
+      return 'Ꝟ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     async function loadWorkerOverview() {
+      if (!sessionStorage.getItem('vv_token')) {
+        window.location.href = 'index.html';
+        return;
+      }
+      if (!window.VV_LEDGER_URL) {
+        document.getElementById('company-name').textContent = 'Ledger offline';
+        return;
+      }
+
       const params = new URLSearchParams(location.search);
       const id = params.get('id') || '';
-      if (!VV_WORKER.baseUrl) return;
-      const res = await VV_WORKER.get('/companies/' + encodeURIComponent(id) + '/worker-view');
-      if (res.ok && res.data) {
-        // Page-specific elements can be filled when worker shapes the response
-        console.log('[worker-view]', res.data);
+      if (!id) {
+        document.getElementById('company-name').textContent = 'No company selected';
+        document.getElementById('company-desc').textContent = 'Open this page from a workplace on your dashboard.';
+        return;
       }
+
+      // Profile header
+      try {
+        const me = await VV_WORKER.get('/me');
+        if (me.ok && me.data) {
+          const hn = document.getElementById('header-name');
+          if (hn) hn.textContent = me.data.displayName || me.data.name || '—';
+          const ha = document.getElementById('header-avatar');
+          if (ha && me.data.avatar) ha.src = me.data.avatar;
+        }
+      } catch (_) {}
+
+      const res = await VV_WORKER.get('/companies/' + encodeURIComponent(id) + '/worker-view');
+      if (!res.ok) {
+        document.getElementById('company-name').textContent = res.error || 'Workplace not found';
+        document.getElementById('company-desc').textContent = 'You may not be a member of this company, or the id is invalid.';
+        return;
+      }
+
+      const c = res.data;
+      document.title = (c.name || 'Workplace') + ' · Worker · VAULT';
+      document.getElementById('company-name').textContent = c.name || 'Company';
+      document.getElementById('company-desc').textContent = c.description || 'No description provided.';
+      document.getElementById('company-logo').textContent = initials(c.name);
+      document.getElementById('worker-role-badge').textContent = c.role || 'Worker';
+      document.getElementById('worker-dept-badge').textContent = c.department || 'General';
+      document.getElementById('roster-dept-title').textContent = c.department || 'Department';
+
+      const rateEl = document.getElementById('worker-rate');
+      if (rateEl) rateEl.textContent = c.salary > 0 ? moneyText(c.salary) + '/h' : '—';
+      const note = document.getElementById('worker-rate-note');
+      if (note) note.textContent = c.salaryNote || 'Vidiadollars / hour';
+
+      const tbody = document.getElementById('roster-tbody');
+      const roster = Array.isArray(c.roster) ? c.roster : [];
+      if (tbody) {
+        tbody.innerHTML = roster.length ? roster.map(r => `
+          <tr class="hover:bg-white/[0.02] ${r.isYou ? 'bg-vv-green-500/5' : ''}">
+            <td class="px-4 py-3">
+              <div class="font-medium">${r.name || '—'}${r.isYou ? ' <span class="text-xs text-vv-green-400">(you)</span>' : ''}</div>
+              <div class="text-xs text-white/35">${r.handle ? '@' + String(r.handle).replace(/^@/, '') : ''}</div>
+            </td>
+            <td class="px-4 py-3">${r.role || '—'}</td>
+            <td class="px-4 py-3 font-mono text-vv-green-400">${r.rate != null && r.rate !== '' ? moneyText(r.rate) + '/h' : '—'}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="3" class="px-4 py-6 text-center text-white/40 text-sm">No department roster yet.</td></tr>';
+      }
+
+      // Soft-replace leftover template brand text
+      document.querySelectorAll('body *').forEach(el => {
+        if (el.children.length === 0 && el.textContent && el.textContent.includes('Vidia Motors')) {
+          el.textContent = el.textContent.replace(/Vidia Motors/g, c.name || 'Company');
+        }
+      });
     }
     document.addEventListener('DOMContentLoaded', loadWorkerOverview);
   </script>

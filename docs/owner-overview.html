@@ -98,18 +98,18 @@
     <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6 mb-8">
       <div class="flex flex-col sm:flex-row sm:items-start gap-5">
         <!-- Logo -->
-        <div class="w-20 h-20 rounded-2xl bg-vv-green-500/15 border border-vv-green-500/30 flex items-center justify-center text-vv-green-400 font-bold text-2xl shrink-0">
-          RC
+        <div id="company-logo" class="w-20 h-20 rounded-2xl bg-vv-green-500/15 border border-vv-green-500/30 flex items-center justify-center text-vv-green-400 font-bold text-2xl shrink-0">
+          —
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-2 mb-1">
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Riverfront Café</h1>
-            <span class="text-xs bg-vv-blue-500/20 text-vv-blue-300 px-2 py-0.5 rounded-full">Owner</span>
+            <h1 id="company-name" class="text-2xl sm:text-3xl font-bold tracking-tight">Loading…</h1>
+            <span id="company-role-badge" class="text-xs bg-vv-blue-500/20 text-vv-blue-300 px-2 py-0.5 rounded-full">Owner</span>
           </div>
-          <p class="text-white/50 text-sm leading-relaxed max-w-xl">
-            A riverside café serving citizens of VidiaVille — coffee, pastries, and quiet tables by the water.
+          <p id="company-desc" class="text-white/50 text-sm leading-relaxed max-w-xl">
+            Loading company details…
           </p>
-          <p class="text-xs text-white/30 mt-2">Established 04 Apr 2026 · ID <span class="font-mono">co_riverfront_01</span></p>
+          <p class="text-xs text-white/30 mt-2">ID <span class="font-mono" id="company-id">—</span></p>
         </div>
         <div class="sm:text-right shrink-0 bg-vv-blue-950/50 border border-white/5 rounded-xl px-5 py-4">
           <div class="text-xs text-white/40 uppercase tracking-wider">Company balance</div>
@@ -370,7 +370,7 @@
 
     <!-- ========== MANAGE (owner tools) ========== -->
     <div id="panel-manage" class="panel space-y-6">
-      <p class="text-sm text-white/45">Owner tools for Riverfront Café. Actions are stored locally for now and prepared for database export.</p>
+      <p class="text-sm text-white/45">Owner tools for this company. Actions are stored locally for now and prepared for database export.</p>
 
       <!-- Contracts hub -->
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
@@ -590,7 +590,7 @@
   </main>
 
   <footer class="py-8 text-center text-white/20 text-xs tracking-wider">
-    VAULT · Launch v1 · Riverfront Café
+    VAULT · Launch v1 · Company
   </footer>
 
   <script>
@@ -1370,35 +1370,80 @@
 
 
   <script>
+    function initials(name) {
+      return String(name || '?')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(w => w[0].toUpperCase())
+        .join('') || '?';
+    }
+
     async function loadOwnerOverview() {
+      if (!window.VV_LEDGER_URL) {
+        const h = document.getElementById('company-name');
+        if (h) h.textContent = 'Ledger offline';
+        return;
+      }
+      const token = sessionStorage.getItem('vv_token');
+      if (!token) {
+        window.location.href = 'index.html';
+        return;
+      }
+
       const params = new URLSearchParams(location.search);
       const id = params.get('id') || '';
       const path = id ? '/companies/' + encodeURIComponent(id) : '/companies/mine/owner';
       const res = await VV_WORKER.get(path);
-      if (!VV_WORKER.baseUrl) {
-        const h = document.querySelector('h1');
-        if (h) h.textContent = 'Company (worker offline)';
+
+      if (!res.ok) {
+        const h = document.getElementById('company-name');
+        if (h) h.textContent = res.error || 'Company not found';
+        const d = document.getElementById('company-desc');
+        if (d) d.textContent = 'Open this page from your dashboard after a company is approved, or check the company id.';
         return;
       }
-      if (res.ok && res.data) {
-        COMPANY = res.data;
-        const h = document.querySelector('h1');
-        if (h && COMPANY.name) h.textContent = COMPANY.name;
-        const bal = document.getElementById('company-balance');
-        if (bal) bal.textContent = 'Ꝟ' + Number(COMPANY.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+      COMPANY = res.data;
+      document.title = (COMPANY.name || 'Company') + ' · VAULT';
+
+      const nameEl = document.getElementById('company-name');
+      if (nameEl) nameEl.textContent = COMPANY.name || 'Company';
+      const descEl = document.getElementById('company-desc');
+      if (descEl) descEl.textContent = COMPANY.description || 'No description provided.';
+      const idEl = document.getElementById('company-id');
+      if (idEl) idEl.textContent = COMPANY.id || '—';
+      const logoEl = document.getElementById('company-logo');
+      if (logoEl) logoEl.textContent = initials(COMPANY.name);
+      const bal = document.getElementById('company-balance');
+      if (bal) {
+        const n = Number(COMPANY.balance || 0);
+        bal.textContent = (typeof vvMoney === 'function' ? vvMoney(n, { forceText: true }) : ('Ꝟ' + n.toLocaleString('en-US', { minimumFractionDigits: 2 })));
       }
-      const contracts = await VV_WORKER.get('/companies/' + encodeURIComponent(COMPANY.id || id) + '/contracts');
-      if (contracts.ok && contracts.data) {
-        pendingOutgoing = contracts.data.outgoing || [];
-        pendingIncoming = contracts.data.incoming || [];
-        activeContracts = contracts.data.active || [];
+      const roleBadge = document.getElementById('company-role-badge');
+      if (roleBadge) roleBadge.textContent = COMPANY.role === 'owner' || COMPANY.role === 'Owner' ? 'Owner' : (COMPANY.role || 'Member');
+
+      // Replace leftover template strings in page copy
+      document.querySelectorAll('body *').forEach(el => {
+        if (el.children.length === 0 && el.textContent && el.textContent.includes('Riverfront')) {
+          el.textContent = el.textContent.replace(/Riverfront Café/g, COMPANY.name || 'Company');
+        }
+      });
+
+      if (COMPANY.id) {
+        const contracts = await VV_WORKER.get('/companies/' + encodeURIComponent(COMPANY.id) + '/contracts');
+        if (contracts.ok && contracts.data) {
+          if (typeof pendingOutgoing !== 'undefined') pendingOutgoing = contracts.data.outgoing || [];
+          if (typeof pendingIncoming !== 'undefined') pendingIncoming = contracts.data.incoming || [];
+          if (typeof activeContracts !== 'undefined') activeContracts = contracts.data.active || [];
+        }
       }
       const cit = await VV_WORKER.get('/citizens');
-      if (cit.ok && cit.data && cit.data.items) {
+      if (cit.ok && cit.data && cit.data.items && typeof CONTRACT_CITIZENS !== 'undefined') {
         CONTRACT_CITIZENS = cit.data.items.map(c => c.displayName || c.name);
       }
       const cos = await VV_WORKER.get('/companies');
-      if (cos.ok && cos.data && cos.data.items) {
+      if (cos.ok && cos.data && cos.data.items && typeof CONTRACT_COMPANIES !== 'undefined') {
         CONTRACT_COMPANIES = cos.data.items.map(c => c.name);
       }
     }

@@ -972,21 +972,39 @@
         `).join('') : '<p class="text-white/40">No recent activity.</p>';
       }
 
-      const gigs = await VV_WORKER.get('/me/gigs');
+      const [gigs, mine] = await Promise.all([
+        VV_WORKER.get('/me/gigs'),
+        VV_WORKER.get('/me/companies'),
+      ]);
       const gigsEl = document.getElementById('gigs-list');
-      const glist = (gigs.ok && gigs.data && gigs.data.items) ? gigs.data.items : [];
+      let glist = (gigs.ok && gigs.data && gigs.data.items) ? gigs.data.items.slice() : [];
+      if (mine.ok && mine.data && mine.data.items) {
+        for (const c of mine.data.items) {
+          if (!glist.some(g => (g.companyId || g.id) === c.id)) {
+            glist.push({
+              companyId: c.id,
+              company: c.name,
+              role: (c.role === 'owner' || c.role === 'Owner') ? 'Owner' : (c.role || 'Member'),
+              href: 'owner-overview?id=' + encodeURIComponent(c.id),
+            });
+          }
+        }
+      }
       if (gigsEl) {
         gigsEl.innerHTML = glist.length ? glist.map(g => {
-          const href = g.role === 'Owner'
-            ? 'owner-overview?id=' + encodeURIComponent(g.companyId || '')
-            : 'worker-overview?id=' + encodeURIComponent(g.companyId || '');
-          const badge = g.role === 'Owner'
+          const isOwner = String(g.role || '').toLowerCase() === 'owner';
+          const href = g.href || (isOwner
+            ? 'owner-overview?id=' + encodeURIComponent(g.companyId || g.id || '')
+            : 'worker-overview?id=' + encodeURIComponent(g.companyId || g.id || ''));
+          const badge = isOwner
             ? '<span class="text-xs text-vv-blue-300 bg-vv-blue-500/15 px-2 py-0.5 rounded-full">Owner</span>'
             : '<span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>';
+          const title = g.company || g.companyName || 'Company';
+          const role = g.role || 'Member';
           return `<a href="${href}" class="block bg-vv-blue-900/60 border border-white/10 hover:border-vv-green-500/40 rounded-xl p-4 transition">
-            <div class="flex justify-between items-start"><div>
-              <div class="font-medium text-white">${g.companyName || ''}</div>
-              <div class="text-sm text-white/50">${g.role || ''}</div>
+            <div class="flex justify-between items-start gap-3"><div>
+              <div class="font-medium text-white">${title}</div>
+              <div class="text-sm text-white/50">${role}</div>
             </div>${badge}</div></a>`;
         }).join('') : '<p class="text-white/40">You are not part of any company yet.</p>';
       }
