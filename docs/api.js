@@ -8,9 +8,9 @@
  * All three Workers should bind the SAME KV namespace as AUTH
  * so sessions and citizen records are shared.
  */
-window.VV_AUTH_URL = 'https://verify-bot.max7gorman.workers.dev';
-window.VV_LEDGER_URL = 'https://vault-ledger.max7gorman.workers.dev'; // change after you create it
-window.VV_ADMIN_URL = 'https://vault-admin.max7gorman.workers.dev'; // change after you create it
+window.VV_AUTH_URL = 'https://verify-bot.vidiavault.workers.dev';
+window.VV_LEDGER_URL = 'https://vault-ledger.vidiavault.workers.dev'; // change after you create it
+window.VV_ADMIN_URL = 'https://vault-admin.vidiavault.workers.dev'; // change after you create it
 
 window.VV_WORKER = {
   // legacy alias used by auth helpers — points at auth worker
