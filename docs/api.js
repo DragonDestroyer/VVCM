@@ -43,12 +43,25 @@ window.VV_WORKER = {
       const token = this.getToken();
       if (token) headers.Authorization = 'Bearer ' + token;
 
-      const res = await fetch(url, {
-        method,
-        headers,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-        credentials: 'omit',
-      });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      let res;
+      try {
+        res = await fetch(url, {
+          method,
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+          credentials: 'omit',
+          signal: ctrl.signal,
+        });
+      } catch (err) {
+        if (err && (err.name === 'AbortError' || /abort/i.test(String(err.message || '')))) {
+          return { ok: false, status: 408, error: 'VAULT-408 · request timed out after 10s', data: null };
+        }
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
       let data = null;
       const text = await res.text();
       if (text) {

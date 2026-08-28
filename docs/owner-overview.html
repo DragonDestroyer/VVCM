@@ -253,20 +253,52 @@
             </tbody>
           </table>
         </div>
-        <p class="text-xs text-white/30 mt-3">
-          <a href="worker-overview" class="text-vv-blue-300 hover:text-vv-green-400 transition">Open sample worker overview</a>
-          (Vidia Motors · Sales Floor)
-        </p>
+        <p class="text-xs text-white/30 mt-3">Roster is limited to citizens who accepted a job offer or whose application you approved.</p>
+      </section>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-3">
+        <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Hire</h2>
+        <p class="text-xs text-white/40">Send a job offer to an existing citizen. They accept it from their dashboard.</p>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-white/40">Citizen</label>
+            <input id="hire-search" list="hire-citizens" placeholder="Start typing a username…"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" />
+            <datalist id="hire-citizens"></datalist>
+          </div>
+          <div>
+            <label class="text-xs text-white/40">Role</label>
+            <input id="hire-role" placeholder="e.g. Barista"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40">Department</label>
+            <input id="hire-dept" placeholder="e.g. Front of House"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40">Rate (optional)</label>
+            <input id="hire-salary" type="number" min="0" step="0.01" value="0"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+        <textarea id="hire-message" rows="2" placeholder="Short offer message…"
+                  class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></textarea>
+        <button type="button" id="btn-hire" class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2 rounded-xl">
+          Send job offer
+        </button>
+        <p id="hire-status" class="text-xs text-white/40"></p>
+      </section>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-3">
+        <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Incoming applications</h2>
+        <ul id="owner-job-apps" class="space-y-2 text-sm text-white/40"><li>Loading…</li></ul>
       </section>
 
       <section>
         <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Open positions</h2>
-        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <div class="font-medium">Part-time Server</div>
-            <div class="text-sm text-white/45">Ꝟ16 / h · 1 opening · Front of House</div>
-          </div>
-          <span class="text-xs bg-vv-green-500/10 text-vv-green-400 px-2.5 py-1 rounded-full self-start">Hiring</span>
+        <div id="open-positions-list" class="space-y-2">
+          <p class="text-sm text-white/40">No open positions right now.</p>
         </div>
       </section>
     </div>
@@ -1434,6 +1466,89 @@
     }
 
 
+
+    async function setupHiring() {
+      const list = document.getElementById('hire-citizens');
+      const cit = await VV_WORKER.get('/citizens');
+      if (list && cit.ok && cit.data && cit.data.items) {
+        list.innerHTML = cit.data.items.map(c => {
+          const u = c.username || '';
+          const n = c.displayName || c.name || u;
+          return `<option value="${u}">${n}</option>`;
+        }).join('');
+      }
+      const btn = document.getElementById('btn-hire');
+      if (btn && !btn.dataset.bound) {
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', sendJobOffer);
+      }
+      await loadOwnerJobApps();
+    }
+
+    async function sendJobOffer() {
+      const status = document.getElementById('hire-status');
+      const toUsername = (document.getElementById('hire-search').value || '').trim().toLowerCase();
+      const role = (document.getElementById('hire-role').value || '').trim();
+      const department = (document.getElementById('hire-dept').value || '').trim();
+      const salary = parseFloat(document.getElementById('hire-salary').value) || 0;
+      const message = (document.getElementById('hire-message').value || '').trim();
+      if (!COMPANY.id) { status.textContent = 'Company not loaded.'; return; }
+      if (!toUsername || !role) { status.textContent = 'Citizen and role are required.'; return; }
+      status.textContent = 'Sending offer…';
+      const res = await VV_WORKER.post('/jobs/offer', {
+        companyId: COMPANY.id,
+        toUsername,
+        role,
+        department,
+        salary,
+        message,
+      });
+      status.textContent = res.ok ? 'Offer sent. They can accept it from their dashboard.' : (res.error || 'Failed');
+    }
+
+    async function loadOwnerJobApps() {
+      const ul = document.getElementById('owner-job-apps');
+      if (!ul || !COMPANY.id) return;
+      const res = await VV_WORKER.get('/companies/' + encodeURIComponent(COMPANY.id) + '/jobs');
+      if (!res.ok) {
+        const code = res.status === 408 ? 'VAULT-408' : ('VAULT-' + (res.status || '000'));
+        ul.innerHTML = '<li class="text-red-400">Error ' + code + ' — ' + (res.error || 'no response') + '</li>';
+        return;
+      }
+      const apps = res.data.applications || [];
+      if (!apps.length) {
+        ul.innerHTML = '<li>No applications to review.</li>';
+        return;
+      }
+      ul.innerHTML = apps.map(j => `
+        <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3">
+          <div class="font-medium text-white">${j.from} · ${j.role || 'Open role'}</div>
+          <div class="text-white/50 mt-1">${j.message || ''}</div>
+          <div class="flex gap-2 mt-2">
+            <button type="button" class="bg-vv-green-500 text-vv-blue-950 text-xs font-semibold px-3 py-1.5 rounded-lg" onclick="ownerRespondJob('${j.id}', true)">Approve</button>
+            <button type="button" class="border border-white/15 text-xs px-3 py-1.5 rounded-lg" onclick="ownerRespondJob('${j.id}', false)">Reject</button>
+          </div>
+        </li>`).join('');
+    }
+
+    async function ownerRespondJob(id, accept) {
+      const res = await VV_WORKER.post('/jobs/' + encodeURIComponent(id) + '/respond', {
+        decision: accept ? 'accept' : 'decline',
+      });
+      if (!res.ok) {
+        alert(res.error || 'Failed');
+        return;
+      }
+      await loadOwnerJobApps();
+      // refresh company so roster updates
+      const fresh = await VV_WORKER.get('/companies/' + encodeURIComponent(COMPANY.id));
+      if (fresh.ok && fresh.data) {
+        COMPANY = Object.assign(COMPANY, fresh.data);
+        renderCompanyRoster(COMPANY);
+        renderOpenPositions(COMPANY);
+      }
+    }
+
     async function loadOwnerOverview() {
       if (!window.VV_LEDGER_URL) {
         const h = document.getElementById('company-name');
@@ -1464,6 +1579,7 @@
       renderCompanyRoster(COMPANY);
       renderOpenPositions(COMPANY);
       await loadCompanyLedger();
+      await setupHiring();
 
 
       const nameEl = document.getElementById('company-name');
