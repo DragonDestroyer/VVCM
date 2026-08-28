@@ -120,7 +120,7 @@
     </section>
 
     <!-- Tabs -->
-    <nav class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8">
+    <nav class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-8">
       <button type="button" onclick="showCoPanel('overview')" id="tab-overview"
               class="tab-btn active py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
         Overview
@@ -128,6 +128,10 @@
       <button type="button" onclick="showCoPanel('roster')" id="tab-roster"
               class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
         Roster
+      </button>
+      <button type="button" onclick="showCoPanel('pay')" id="tab-pay"
+              class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Pay
       </button>
       <button type="button" onclick="showCoPanel('ledger')" id="tab-ledger"
               class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
@@ -300,6 +304,51 @@
         <div id="open-positions-list" class="space-y-2">
           <p class="text-sm text-white/40">No open positions right now.</p>
         </div>
+      </section>
+    </div>
+
+
+    <!-- ========== PAY ========== -->
+    <div id="panel-pay" class="panel space-y-6">
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-1">Company pay</h2>
+        <p class="text-sm text-white/45 mb-5">Send existing company funds to a citizen. This deducts the company balance and credits their personal vault. You cannot create money here.</p>
+        <div class="mb-5 bg-vv-blue-950/50 border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between">
+          <span class="text-xs text-white/40 uppercase tracking-wider">Available company funds</span>
+          <span id="pay-company-balance" class="font-mono text-vv-green-400 font-semibold">—</span>
+        </div>
+        <form id="company-pay-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="return sendCompanyPay(event)">
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Citizen</label>
+            <input type="text" id="pay-citizen" list="pay-citizens" required placeholder="Username of the recipient"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+            <datalist id="pay-citizens"></datalist>
+          </div>
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Kind</label>
+            <select id="pay-kind" class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
+              <option value="salary">Salary</option>
+              <option value="pay">Bonus / payout</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Amount</label>
+            <input type="number" id="pay-amount" min="0.01" step="0.01" required placeholder="0.00"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Note</label>
+            <input type="text" id="pay-note" placeholder="Shift pay, bonus, reimbursement…"
+                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
+          </div>
+          <div class="sm:col-span-2">
+            <button type="submit" class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold px-6 py-2.5 rounded-xl transition">
+              Send from company
+            </button>
+          </div>
+        </form>
+        <p id="pay-status" class="mt-3 text-sm text-white/40 hidden"></p>
       </section>
     </div>
 
@@ -481,69 +530,6 @@
         </div>
       </section>
 
-      <!-- Record transaction -->
-      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
-        <h2 class="text-lg font-semibold mb-1">Record transaction</h2>
-        <p class="text-sm text-white/45 mb-5">Income, expenses, salaries, and transfers against company funds.</p>
-        <form id="tx-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="return submitTransaction(event)">
-          <div>
-            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Type</label>
-            <select id="tx-type" class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-              <option value="salary">Salary</option>
-              <option value="transfer">Transfer to citizen</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Amount (Vidiadollars)</label>
-            <input type="number" id="tx-amount" min="0.01" step="0.01" required placeholder="0.00"
-                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
-          </div>
-          <div>
-            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Citizen <span class="text-white/30">(salary / transfer)</span></label>
-            <input type="text" id="tx-citizen" list="roster-citizens" placeholder="Select or type name"
-                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
-            <datalist id="roster-citizens">
-              <option value="Dragon_Destroyer"></option>
-              <option value="Vinco"></option>
-              <option value="魁北克"></option>
-              <option value="cal"></option>
-              <option value="temporalis"></option>
-              <option value="YellowMan"></option>
-              <option value="PotatoQueen"></option>
-              <option value="Idkman29"></option>
-              <option value="Dominor"></option>
-              <option value="Rodgas_YT"></option>
-              <option value="Alon_Dragon"></option>
-              <option value="Chicken"></option>
-            </datalist>
-          </div>
-          <div>
-            <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Description</label>
-            <input type="text" id="tx-desc" placeholder="Optional note"
-                   class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
-          </div>
-          <div class="sm:col-span-2">
-            <button type="submit"
-                    class="w-full sm:w-auto bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold px-6 py-2.5 rounded-xl transition">
-              Record
-            </button>
-          </div>
-        </form>
-        <p id="tx-status" class="mt-3 text-sm text-vv-green-400 hidden"></p>
-      </section>
-
-      <!-- Pay salary quick -->
-      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
-        <h2 class="text-lg font-semibold mb-1">Run payroll (sample)</h2>
-        <p class="text-sm text-white/45 mb-4">Pays listed rates for one shift block. Placeholder — will post to database later.</p>
-        <button type="button" onclick="runPayrollSample()"
-                class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium px-5 py-2.5 rounded-xl transition">
-          Pay all active roles (demo)
-        </button>
-        <p id="payroll-status" class="mt-3 text-sm text-white/50 hidden"></p>
-      </section>
     </div>
   </main>
 
@@ -948,8 +934,13 @@
     }
 
     function updateBalanceDisplay() {
-      document.getElementById('company-balance').textContent =
-        'Ꝟ' + COMPANY.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const txt = typeof moneyTxt === 'function'
+        ? moneyTxt(COMPANY.balance)
+        : ('\uA75E' + Number(COMPANY.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      const el = document.getElementById('company-balance');
+      if (el) el.textContent = txt;
+      const pb = document.getElementById('pay-company-balance');
+      if (pb) pb.textContent = txt;
     }
 
     /** Export payload somewhere later — localStorage + console for now */
@@ -979,52 +970,54 @@
       tbody.insertBefore(tr, tbody.firstChild);
     }
 
-    async function submitTransaction(e) {
+    function fillPayCitizens(items) {
+      const dl = document.getElementById('pay-citizens');
+      if (!dl || !items) return;
+      dl.innerHTML = items.map(c => {
+        const u = c.username || '';
+        const n = c.displayName || c.name || u;
+        return `<option value="${u}">${n}</option>`;
+      }).join('');
+    }
+
+    async function sendCompanyPay(e) {
       e.preventDefault();
-      const type = document.getElementById('tx-type').value;
-      const amount = parseFloat(document.getElementById('tx-amount').value);
-      const citizen = document.getElementById('tx-citizen').value.trim();
-      const desc = document.getElementById('tx-desc').value.trim();
-
-      if (!amount || amount <= 0) {
-        alert('Enter a valid amount.');
-        return false;
-      }
-      if ((type === 'salary' || type === 'transfer') && !citizen) {
-        alert('Choose a citizen for salary or transfer.');
-        return false;
-      }
-      if (!COMPANY.id) {
-        alert('Company not loaded.');
-        return false;
-      }
-
-      const detail = desc || (citizen ? (type + ' · ' + citizen) : type);
-      const status = document.getElementById('tx-status');
-      status.textContent = 'Recording…';
+      const status = document.getElementById('pay-status');
+      const toUsername = (document.getElementById('pay-citizen').value || '').trim().toLowerCase();
+      const amount = parseFloat(document.getElementById('pay-amount').value);
+      const note = (document.getElementById('pay-note').value || '').trim();
+      const kind = document.getElementById('pay-kind').value;
       status.classList.remove('hidden');
-
-      const res = await VV_WORKER.post('/companies/' + encodeURIComponent(COMPANY.id) + '/ledger', {
-        type,
-        amount,
-        label: detail,
+      if (!COMPANY.id) { status.textContent = 'Company not loaded.'; status.className = 'mt-3 text-sm text-red-400'; return false; }
+      if (!toUsername || !(amount > 0)) {
+        status.textContent = 'Choose a citizen and a positive amount.';
+        status.className = 'mt-3 text-sm text-amber-300';
+        return false;
+      }
+      status.textContent = 'Sending…';
+      status.className = 'mt-3 text-sm text-white/40';
+      const res = await VV_WORKER.post('/companies/' + encodeURIComponent(COMPANY.id) + '/pay', {
+        toUsername, amount, note, kind,
       });
       if (!res.ok) {
-        status.textContent = res.error || (res.data && res.data.error) || 'Failed';
-        status.className = 'text-sm text-red-400';
+        status.textContent = res.error || (res.data && res.data.error) || 'Payment failed';
+        status.className = 'mt-3 text-sm text-red-400';
         return false;
       }
-      COMPANY.balance = res.data.balance;
+      COMPANY.balance = res.data.companyBalance;
       updateBalanceDisplay();
-      await loadCompanyLedger();
-      status.textContent = 'Transaction recorded.';
-      status.className = 'text-sm text-vv-green-400';
-      document.getElementById('tx-form').reset();
-      setTimeout(() => status.classList.add('hidden'), 4000);
+      const pb = document.getElementById('pay-company-balance');
+      if (pb) pb.textContent = moneyTxt(COMPANY.balance);
+      if (typeof loadCompanyLedger === 'function') await loadCompanyLedger();
+      status.textContent = 'Paid ' + moneyTxt(amount) + ' to @' + (res.data.to || toUsername) + '.';
+      status.className = 'mt-3 text-sm text-vv-green-400';
+      document.getElementById('company-pay-form').reset();
       return false;
     }
 
     function runPayrollSample() {
+      alert('Use the Pay tab to send real company funds to citizens.');
+      return;
       const lines = [
         { name: 'PotatoQueen', role: 'Barista', amount: 160 },
         { name: 'Vinco', role: 'Shift Lead', amount: 192 },
@@ -1462,6 +1455,8 @@
       if (res.data.balance != null) {
         COMPANY.balance = res.data.balance;
         updateBalanceDisplay();
+        const pb = document.getElementById('pay-company-balance');
+        if (pb) pb.textContent = moneyTxt(COMPANY.balance);
       }
     }
 
@@ -1591,6 +1586,8 @@
       const logoEl = document.getElementById('company-logo');
       if (logoEl) logoEl.textContent = initials(COMPANY.name);
       const bal = document.getElementById('company-balance');
+      const pb = document.getElementById('pay-company-balance');
+      if (pb) pb.textContent = moneyTxt(Number(COMPANY.balance || 0));
       if (bal) {
         const n = Number(COMPANY.balance || 0);
         bal.textContent = (typeof vvMoney === 'function' ? vvMoney(n, { forceText: true }) : ('Ꝟ' + n.toLocaleString('en-US', { minimumFractionDigits: 2 })));
@@ -1637,8 +1634,11 @@
         }
       }
       const cit = await VV_WORKER.get('/citizens');
-      if (cit.ok && cit.data && cit.data.items && typeof CONTRACT_CITIZENS !== 'undefined') {
-        CONTRACT_CITIZENS = cit.data.items.map(c => c.displayName || c.name);
+      if (cit.ok && cit.data && cit.data.items) {
+        if (typeof CONTRACT_CITIZENS !== 'undefined') {
+          CONTRACT_CITIZENS = cit.data.items.map(c => c.displayName || c.name);
+        }
+        fillPayCitizens(cit.data.items);
       }
       const cos = await VV_WORKER.get('/companies');
       if (cos.ok && cos.data && cos.data.items && typeof CONTRACT_COMPANIES !== 'undefined') {
