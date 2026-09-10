@@ -184,10 +184,10 @@
           </button>
           <button type="button" id="btn-grant-all"
                   class="border border-vv-green-500/40 bg-vv-green-500/10 hover:bg-vv-green-500/20 text-vv-green-400 font-semibold text-sm px-5 py-2.5 rounded-xl transition">
-            Grant all citizens
+            Apply to all citizens
           </button>
         </div>
-        <p class="text-xs text-white/30">Grant all uses the Amount + Note fields and adds that amount to every citizen. It ignores the username box. Confirm before running.</p>
+        <p class="text-xs text-white/30">Apply to all uses Mode + Amount + Note and ignores the username box. Remove will not drop anyone below 0.</p>
       </div>
       <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
         <div class="overflow-x-auto vv-scroll">
@@ -542,20 +542,25 @@
     
     async function applyGrantAll() {
       const status = document.getElementById('grant-status');
+      const mode = document.getElementById('grant-mode').value;
       const amountRaw = parseFloat(document.getElementById('grant-amount').value);
-      const note = document.getElementById('grant-note').value.trim() || 'Admin grant all';
-      if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-        status.textContent = 'Enter a positive amount to grant everyone.';
+      const note = document.getElementById('grant-note').value.trim() || ('Admin ' + mode + ' all');
+      if (!Number.isFinite(amountRaw) || amountRaw < 0 || (mode !== 'set' && amountRaw <= 0)) {
+        status.textContent = 'Enter a valid amount.';
         status.className = 'text-xs text-amber-300';
         return;
       }
       const n = Array.isArray(CITIZENS) ? CITIZENS.length : 0;
-      if (!confirm('Add Ṽ' + amountRaw + ' to every citizen (' + n + ' accounts)? This cannot be undone from this button.')) return;
-      status.textContent = 'Granting all…';
+      const verb = mode === 'remove' ? 'Remove Ṽ' + amountRaw + ' from'
+        : mode === 'set' ? 'Set every balance to Ṽ' + amountRaw + ' for'
+        : 'Add Ṽ' + amountRaw + ' to';
+      if (!confirm(verb + ' every citizen (' + n + ' accounts)? This cannot be undone from this button.')) return;
+      status.textContent = 'Updating all ledgers…';
       status.className = 'text-xs text-white/40';
       try {
         const res = await VV_WORKER.adminPost('/admin/citizen/grant-all', {
           amount: Math.abs(amountRaw),
+          mode,
           note,
         }, 60000);
         if (!res.ok) {
@@ -563,7 +568,12 @@
           status.className = 'text-xs text-red-400';
           return;
         }
-        status.textContent = 'Granted ' + amountRaw + ' to ' + (res.data.updated || 0) + ' citizens.';
+        const done = res.data.updated || 0;
+        status.textContent = mode === 'remove'
+          ? ('Removed ' + amountRaw + ' from ' + done + ' citizens.')
+          : mode === 'set'
+            ? ('Set ' + done + ' citizens to ' + amountRaw + '.')
+            : ('Granted ' + amountRaw + ' to ' + done + ' citizens.');
         status.className = 'text-xs text-vv-green-400';
         const cits = await VV_WORKER.adminGet('/admin/citizens');
         if (cits.ok && cits.data && cits.data.items) {
