@@ -177,10 +177,17 @@
                    class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50" />
           </div>
         </div>
-        <button type="button" id="btn-grant-money"
-                class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-5 py-2.5 rounded-xl transition">
-          Apply to ledger
-        </button>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="btn-grant-money"
+                  class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-5 py-2.5 rounded-xl transition">
+            Apply to ledger
+          </button>
+          <button type="button" id="btn-grant-all"
+                  class="border border-vv-green-500/40 bg-vv-green-500/10 hover:bg-vv-green-500/20 text-vv-green-400 font-semibold text-sm px-5 py-2.5 rounded-xl transition">
+            Grant all citizens
+          </button>
+        </div>
+        <p class="text-xs text-white/30">Grant all uses the Amount + Note fields and adds that amount to every citizen. It ignores the username box. Confirm before running.</p>
       </div>
       <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl overflow-hidden">
         <div class="overflow-x-auto vv-scroll">
@@ -532,7 +539,46 @@
       }
     }
 
+    
+    async function applyGrantAll() {
+      const status = document.getElementById('grant-status');
+      const amountRaw = parseFloat(document.getElementById('grant-amount').value);
+      const note = document.getElementById('grant-note').value.trim() || 'Admin grant all';
+      if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+        status.textContent = 'Enter a positive amount to grant everyone.';
+        status.className = 'text-xs text-amber-300';
+        return;
+      }
+      const n = Array.isArray(CITIZENS) ? CITIZENS.length : 0;
+      if (!confirm('Add Ṽ' + amountRaw + ' to every citizen (' + n + ' accounts)? This cannot be undone from this button.')) return;
+      status.textContent = 'Granting all…';
+      status.className = 'text-xs text-white/40';
+      try {
+        const res = await VV_WORKER.adminPost('/admin/citizen/grant-all', {
+          amount: Math.abs(amountRaw),
+          note,
+        });
+        if (!res.ok) {
+          status.textContent = res.error || res.data?.error || ('Failed (' + res.status + ')');
+          status.className = 'text-xs text-red-400';
+          return;
+        }
+        status.textContent = 'Granted ' + amountRaw + ' to ' + (res.data.updated || 0) + ' citizens.';
+        status.className = 'text-xs text-vv-green-400';
+        const cits = await VV_WORKER.adminGet('/admin/citizens');
+        if (cits.ok && cits.data && cits.data.items) {
+          CITIZENS = cits.data.items;
+          refreshGrantDatalist();
+          renderCitizens(document.getElementById('citizen-search')?.value || '');
+        }
+      } catch (err) {
+        status.textContent = 'Request error: ' + (err.message || err);
+        status.className = 'text-xs text-red-400';
+      }
+    }
+
     document.getElementById('btn-grant-money')?.addEventListener('click', applyGrantMoney);
+    document.getElementById('btn-grant-all')?.addEventListener('click', applyGrantAll);
 
     function renderCompanies() {
       const st = sortState.companies;
