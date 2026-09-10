@@ -114,6 +114,52 @@
         <pre id="add-out" class="text-xs text-white/55 bg-vv-blue-950/80 rounded-xl p-4 min-h-[3rem]"></pre>
       </section>
 
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-medium text-[#F87171]">Assign citizen to company</h2>
+        <p class="text-xs text-white/45">
+          Manually attach an existing citizen to a company as a worker (or owner). Use this to set up staff without waiting for job offers.
+        </p>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Citizen username</label>
+            <input id="asg-user" list="asg-citizens" placeholder="apple"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" />
+            <datalist id="asg-citizens"></datalist>
+          </div>
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Company</label>
+            <select id="asg-company" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm">
+              <option value="">Select company…</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Role</label>
+            <input id="asg-role" value="Worker" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Department</label>
+            <input id="asg-dept" value="General" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Salary (optional)</label>
+            <input id="asg-salary" type="number" min="0" step="0.01" value="0"
+                   class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" />
+          </div>
+          <div class="flex items-end pb-1">
+            <label class="flex items-center gap-2 text-sm text-white/70">
+              <input type="checkbox" id="asg-owner" class="rounded border-white/20" />
+              Make company owner
+            </label>
+          </div>
+        </div>
+        <button id="btn-assign" type="button"
+                class="bg-[#9B1C1C] hover:bg-[#7F1D1D] text-white font-semibold text-sm px-4 py-2.5 rounded-xl">
+          Add to company
+        </button>
+        <pre id="asg-out" class="text-xs text-white/55 bg-vv-blue-950/80 rounded-xl p-4 min-h-[3rem]"></pre>
+      </section>
+
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
         <h2 class="text-sm font-medium text-vv-green-400">Sync Discord role → citizens</h2>
         <p class="text-xs text-white/45">
@@ -128,7 +174,7 @@
           </div>
           <div>
             <label class="text-xs text-white/40">Role ID (optional if set on Worker)</label>
-            <input id="sync-role" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="from env" />
+            <input id="sync-role" value="1459428814684684383" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="1459428814684684383" />
           </div>
           <div>
             <label class="text-xs text-white/40">Default balance for new citizens</label>
@@ -230,7 +276,8 @@
         }
         OL.token = r.data.token;
         showApp(true);
-        refreshMeta();
+        await refreshMeta();
+        await loadAssignLists();
       } catch (e) {
         status.textContent = e.message || String(e);
         status.className = 'text-xs text-center text-[#F87171]';
@@ -242,6 +289,44 @@
       showApp(false);
     };
 
+
+    
+    async function loadAssignLists() {
+      const [cits, cos] = await Promise.all([
+        OL.req('GET', '/overlord/citizens'),
+        OL.req('GET', '/overlord/companies'),
+      ]);
+      const dl = document.getElementById('asg-citizens');
+      const items = (cits.data && (cits.data.items || cits.data.citizens)) || [];
+      if (dl) {
+        dl.innerHTML = items.map(c => {
+          const u = c.username || c.handle || '';
+          const n = c.displayName || c.name || u;
+          return `<option value="${u}">${n}</option>`;
+        }).join('');
+      }
+      const sel = document.getElementById('asg-company');
+      const companies = (cos.data && (cos.data.items || cos.data.companies)) || [];
+      if (sel) {
+        sel.innerHTML = '<option value="">Select company…</option>' +
+          companies.map(c => `<option value="${c.id}">${c.name} (${c.owner || 'no owner'})</option>`).join('');
+      }
+    }
+
+    document.getElementById('btn-assign').onclick = async () => {
+      const out = document.getElementById('asg-out');
+      out.textContent = 'Saving…';
+      const body = {
+        username: document.getElementById('asg-user').value.trim().toLowerCase(),
+        companyId: document.getElementById('asg-company').value,
+        role: document.getElementById('asg-role').value.trim(),
+        department: document.getElementById('asg-dept').value.trim(),
+        salary: parseFloat(document.getElementById('asg-salary').value) || 0,
+        asOwner: document.getElementById('asg-owner').checked,
+      };
+      const r = await OL.req('POST', '/overlord/company/assign', body);
+      out.textContent = JSON.stringify(r.data || r, null, 2);
+    };
 
     document.getElementById('btn-add-citizen').onclick = async () => {
       const out = document.getElementById('add-out');
@@ -314,7 +399,8 @@
       const r = await OL.req('GET', '/overlord/me');
       if (r.ok) {
         showApp(true);
-        refreshMeta();
+        await refreshMeta();
+        await loadAssignLists();
       } else {
         OL.token = '';
       }
