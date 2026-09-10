@@ -29,7 +29,7 @@ window.VV_WORKER = {
     }
   },
 
-  async request(base, method, path, body) {
+  async request(base, method, path, body, timeoutMs) {
     if (!base) {
       console.warn('[VAULT] endpoint not set', method, path);
       return { ok: false, status: 0, error: 'Worker endpoint not configured', data: null };
@@ -44,7 +44,7 @@ window.VV_WORKER = {
       if (token) headers.Authorization = 'Bearer ' + token;
 
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 10000);
+      const timer = setTimeout(() => ctrl.abort(), Number(timeoutMs) > 0 ? Number(timeoutMs) : 10000);
       let res;
       try {
         res = await fetch(url, {
@@ -56,7 +56,7 @@ window.VV_WORKER = {
         });
       } catch (err) {
         if (err && (err.name === 'AbortError' || /abort/i.test(String(err.message || '')))) {
-          return { ok: false, status: 408, error: 'VAULT-408 · request timed out after 10s', data: null };
+          return { ok: false, status: 408, error: 'VAULT-408 · request timed out', data: null };
         }
         throw err;
       } finally {
@@ -109,8 +109,8 @@ window.VV_WORKER = {
   adminGet(path) {
     return this.request(window.VV_ADMIN_URL, 'GET', path);
   },
-  adminPost(path, body) {
-    return this.request(window.VV_ADMIN_URL, 'POST', path, body);
+  adminPost(path, body, timeoutMs) {
+    return this.request(window.VV_ADMIN_URL, 'POST', path, body, timeoutMs);
   },
 };
 
