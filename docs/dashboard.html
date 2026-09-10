@@ -173,13 +173,14 @@
       <div id="companies-browse" class="space-y-8">
 
         <!-- Create company trigger -->
-        <button type="button" onclick="openCreateCompany()"
+        <button type="button" id="btn-create-company" onclick="openCreateCompany()"
            class="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl border border-dashed border-vv-green-500/40 bg-vv-green-500/5 hover:bg-vv-green-500/10 hover:border-vv-green-500/60 text-vv-green-400 text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Create a Company
         </button>
+        <p id="pending-company-note" class="hidden text-sm text-amber-300/90 text-center"></p>
 
         <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
           <h3 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Apply to a company</h3>
@@ -499,7 +500,35 @@
     }
 
     /* ---------- Create company form ---------- */
+
+    let pendingCompanyApp = null;
+    async function refreshPendingCompanyApp() {
+      const res = await VV_WORKER.get('/companies/application/pending');
+      const btn = document.getElementById('btn-create-company');
+      const note = document.getElementById('pending-company-note');
+      if (res.ok && res.data && res.data.pending) {
+        pendingCompanyApp = res.data.pending;
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          btn.onclick = null;
+        }
+        if (note) {
+          note.classList.remove('hidden');
+          note.textContent = 'You already have a pending application for "' + (pendingCompanyApp.name || 'a company') + '". Wait for an administrator to approve or reject it before submitting another.';
+        }
+      } else {
+        pendingCompanyApp = null;
+        if (note) note.classList.add('hidden');
+      }
+    }
+
     function openCreateCompany() {
+      if (pendingCompanyApp) {
+        alert('You already have a company application pending review.');
+        return;
+      }
+
       document.getElementById('companies-browse').classList.add('hidden');
       document.getElementById('create-company-form').classList.remove('hidden');
       // start with one empty job row if none
@@ -579,6 +608,7 @@
         alert('Application submitted to administrators for review.\nPersonal contribution is held until approval.');
         clearCompanyForm();
         closeCreateCompany(true);
+        await refreshPendingCompanyApp();
       } catch (e) {
         alert(e.message || String(e));
       }
