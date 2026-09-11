@@ -72,6 +72,49 @@
       </section>
 
 
+
+      <section class="bg-vv-blue-900/60 border border-[#9B1C1C]/40 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-medium text-[#F87171]">Admin roster</h2>
+        <p class="text-xs text-white/45">
+          Stored in KV as <code class="text-white/70">directory:admins</code>. These citizens can open the administrator dashboard.
+        </p>
+        <ul id="ol-admin-list" class="space-y-2 text-sm"></ul>
+        <div class="flex flex-wrap gap-2">
+          <input id="ol-admin-add" list="asg-citizens" placeholder="username to promote"
+                 class="flex-1 min-w-[12rem] bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" />
+          <button id="btn-admin-add" type="button" class="bg-[#9B1C1C] hover:bg-[#7F1D1D] text-white font-semibold text-sm px-4 py-2 rounded-xl">
+            Add admin
+          </button>
+        </div>
+        <pre id="ol-admin-out" class="text-xs text-white/50 bg-vv-blue-950/80 rounded-xl p-3 min-h-[2rem]"></pre>
+
+        <h3 class="text-sm font-medium text-[#F87171] pt-2">Admin activity</h3>
+        <p class="text-xs text-white/45">Print the selected admin’s actions for a recent window.</p>
+        <div class="flex flex-wrap gap-2 items-end">
+          <div class="flex-1 min-w-[10rem]">
+            <label class="text-xs text-white/40 uppercase tracking-wider">Admin</label>
+            <select id="ol-audit-user" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></select>
+          </div>
+          <div>
+            <label class="text-xs text-white/40 uppercase tracking-wider">Window</label>
+            <select id="ol-audit-hours" class="mt-1 bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm">
+              <option value="1">Last 1 hour</option>
+              <option value="2">Last 2 hours</option>
+              <option value="3">Last 3 hours</option>
+              <option value="5">Last 5 hours</option>
+              <option value="12">Last 12 hours</option>
+              <option value="24" selected>Last 24 hours</option>
+              <option value="48">Last 48 hours</option>
+              <option value="72">Last 72 hours</option>
+            </select>
+          </div>
+          <button id="btn-admin-audit" type="button" class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2 rounded-xl">
+            Print log
+          </button>
+        </div>
+        <pre id="ol-audit-out" class="text-xs text-white/70 bg-vv-blue-950/80 rounded-xl p-4 min-h-[8rem] max-h-[28rem] overflow-auto whitespace-pre-wrap"></pre>
+      </section>
+
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5 space-y-4">
         <h2 class="text-sm font-medium text-vv-green-400">Add citizen manually</h2>
         <p class="text-xs text-white/45">
@@ -278,6 +321,7 @@
         showApp(true);
         await refreshMeta();
         await loadAssignLists();
+        await loadAdmins();
       } catch (e) {
         status.textContent = e.message || String(e);
         status.className = 'text-xs text-center text-[#F87171]';
@@ -291,6 +335,89 @@
 
 
     
+    
+    async function loadAdmins() {
+      const r = await OL.req('GET', '/overlord/admins');
+      const items = (r.data && r.data.items) || [];
+      const ul = document.getElementById('ol-admin-list');
+      const sel = document.getElementById('ol-audit-user');
+      if (ul) {
+        ul.innerHTML = items.length ? items.map(a => {
+          const u = a.username || a;
+          const n = a.displayName || u;
+          return `<li class="flex items-center justify-between gap-3 bg-vv-blue-950/70 border border-white/10 rounded-xl px-3 py-2">
+            <div>
+              <div class="font-medium">${n}</div>
+              <div class="text-[11px] text-white/35 font-mono">${u}${a.addedBy ? ' · added by ' + a.addedBy : ''}</div>
+            </div>
+            <button type="button" data-user="${u}" class="ol-admin-remove text-xs text-red-400 hover:text-red-300">Remove</button>
+          </li>`;
+        }).join('') : '<li class="text-white/40">No admins in KV yet.</li>';
+        ul.querySelectorAll('.ol-admin-remove').forEach(btn => {
+          btn.onclick = async () => {
+            if (!confirm('Remove admin ' + btn.dataset.user + '?')) return;
+            const out = document.getElementById('ol-admin-out');
+            const res = await OL.req('POST', '/overlord/admins/remove', { username: btn.dataset.user });
+            out.textContent = JSON.stringify(res.data || res, null, 2);
+            await loadAdmins();
+          };
+        });
+      }
+      if (sel) {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">All admins</option>' +
+          items.map(a => {
+            const u = a.username || a;
+            return `<option value="${u}">${a.displayName || u} (${u})</option>`;
+          }).join('');
+        if (cur) sel.value = cur;
+      }
+    }
+
+    document.getElementById('btn-admin-add').onclick = async () => {
+      const out = document.getElementById('ol-admin-out');
+      const username = document.getElementById('ol-admin-add').value.trim().toLowerCase();
+      if (!username) { out.textContent = 'Enter a username.'; return; }
+      const r = await OL.req('POST', '/overlord/admins/add', { username });
+      out.textContent = JSON.stringify(r.data || r, null, 2);
+      document.getElementById('ol-admin-add').value = '';
+      await loadAdmins();
+    };
+
+    document.getElementById('btn-admin-audit').onclick = async () => {
+      const out = document.getElementById('ol-audit-out');
+      const username = document.getElementById('ol-audit-user').value;
+      const hours = document.getElementById('ol-audit-hours').value;
+      out.textContent = 'Loading…';
+      const q = '/overlord/admins/audit?hours=' + encodeURIComponent(hours) +
+        (username ? '&username=' + encodeURIComponent(username) : '');
+      const r = await OL.req('GET', q);
+      if (!r.ok) {
+        out.textContent = r.data?.error || ('Failed ' + r.status);
+        return;
+      }
+      const items = r.data.items || [];
+      const who = r.data.username || 'all';
+      const lines = [
+        'VAULT admin audit',
+        'Subject: ' + who,
+        'Window: last ' + r.data.hours + ' hour(s)',
+        'Entries: ' + items.length,
+        ''.padEnd(48, '-'),
+      ];
+      if (!items.length) {
+        lines.push('No actions in this window.');
+      } else {
+        for (const e of items) {
+          const when = e.at ? new Date(e.at).toLocaleString() : '';
+          const detail = e.detail ? JSON.stringify(e.detail) : '';
+          lines.push(when + '  [' + (e.by || '') + ']  ' + (e.action || ''));
+          if (detail && detail !== '{}') lines.push('    ' + detail);
+        }
+      }
+      out.textContent = lines.join('\\n');
+    };
+
     async function loadAssignLists() {
       const [cits, cos] = await Promise.all([
         OL.req('GET', '/overlord/citizens'),
@@ -401,6 +528,7 @@
         showApp(true);
         await refreshMeta();
         await loadAssignLists();
+        await loadAdmins();
       } else {
         OL.token = '';
       }
