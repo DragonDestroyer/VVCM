@@ -1,7 +1,5 @@
 # VAULT changelog
 
-Edit this file in GitHub. The site **i** button loads it as-is.
-
 ## v1 — Official Launch
 
 - Citizen login with Discord verification
@@ -10,8 +8,6 @@ Edit this file in GitHub. The site **i** button loads it as-is.
 - Overlord admin roster and audit log
 
 ### Notes
-
-Update this file whenever you ship a change. Use normal GitHub README markdown:
 
 - `##` for versions
 - `-` for bullet points
