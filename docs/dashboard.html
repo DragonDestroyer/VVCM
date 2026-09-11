@@ -1002,6 +1002,7 @@
       const pb = document.getElementById('pay-balance');
       if (pb) setMoneyEl(pb, u.balance);
       window.VV_CURRENT_USER = name;
+      window.VV_ME_USERNAME = String(u.username || u.handle || '').replace(/^@/, '').toLowerCase();
       updateAdminPanelButton(u);
     }
 
@@ -1281,6 +1282,25 @@
       if (cit.ok && cit.data && Array.isArray(cit.data.items)) {
         citizens = cit.data.items || [];
         fillCoOwnerSelect();
+      }
+
+      try { await loadDashContracts(); }
+      catch (e) {
+        const st = document.getElementById('contracts-status');
+        if (st) st.textContent = 'VAULT-000 · ' + (e.message || 'failed to load contracts');
+        ['dash-incoming-contracts','dash-outgoing-contracts','dash-active-contracts'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = '<li class="text-white/40">No contracts available.</li>';
+        });
+      }
+      try { await loadDashJobs(); }
+      catch (e) {
+        const st = document.getElementById('jobs-status');
+        if (st) st.textContent = 'VAULT-000 · ' + (e.message || 'failed to load jobs');
+        ['dash-job-invites','dash-job-apps','dash-job-incoming-apps'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = '<li class="text-white/40">No job invites available.</li>';
+        });
       }
     }
 
