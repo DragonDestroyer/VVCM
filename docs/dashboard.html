@@ -70,9 +70,12 @@
         </a>
       </div>
       <div class="flex items-center gap-3">
-        <a href="administrator-dashboard" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
+        <a href="administrator-dashboard.html" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
            title="Administrator panel">Admin Panel</a>
 
+        <button type="button" id="changelog-btn" title="Changelog" aria-label="Changelog"
+                onclick="VV_openChangelog()"
+                class="w-7 h-7 rounded-full border border-white/20 text-white/50 hover:text-vv-green-400 hover:border-vv-green-500/50 text-xs font-serif italic flex items-center justify-center">i</button>
         <img id="header-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
         <span id="header-name" class="text-sm text-white/70 hidden sm:inline">—</span>
         <a href="index.html" id="btn-signout" class="text-xs text-white/40 hover:text-vv-green-400 transition ml-2">Sign out</a>
@@ -1191,6 +1194,26 @@
         location.reload();
       };
 
+
+      async function fillApplyCompanies() {
+        const sel = document.getElementById('apply-company-id');
+        if (!sel) return;
+        const res = await VV_WORKER.get('/companies');
+        const items = (res.ok && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
+        const mineIds = new Set();
+        try {
+          const mine = await VV_WORKER.get('/me/companies');
+          if (mine.ok && mine.data && mine.data.items) {
+            mine.data.items.forEach(c => { if (c.id) mineIds.add(c.id); });
+          }
+        } catch (_) {}
+        const opts = items.filter(c => c.id && !mineIds.has(c.id));
+        sel.innerHTML = '<option value="">Select a company…</option>' +
+          (opts.length
+            ? opts.map(c => `<option value="${c.id}">${c.name || 'Company'}</option>`).join('')
+            : '<option value="" disabled>No companies available</option>');
+      }
+
     async function loadDashboard() {
       if (!requireSession()) return;
       document.getElementById('btn-send-pay')?.addEventListener('click', sendPayment);
@@ -1250,7 +1273,7 @@
             glist.push({
               companyId: c.id,
               company: c.name,
-              role: (c.role === 'owner' || c.role === 'Owner') ? 'Owner' : (c.role || 'Member'),
+              role: /co-?owner/i.test(String(c.role||'')) ? 'Co-owner' : (/owner/i.test(String(c.role||'')) ? 'Owner' : (c.role || 'Member')),
               href: (String(c.role||'').toLowerCase().includes('owner')
                 ? 'owner-overview.html?id='
                 : 'worker-overview.html?id=') + encodeURIComponent(c.id),
@@ -1261,11 +1284,15 @@
       if (gigsEl) {
         gigsEl.innerHTML = glist.length ? glist.map(g => {
           const roleLc = String(g.role || '').toLowerCase();
-          const isOwner = roleLc === 'owner' || roleLc === 'co-owner' || roleLc === 'coowner';
-          const href = g.href || (isOwner
+          const isCo = roleLc === 'co-owner' || roleLc === 'coowner';
+          const isOwner = roleLc === 'owner';
+          const ownerish = isOwner || isCo;
+          const href = g.href || (ownerish
             ? 'owner-overview.html?id=' + encodeURIComponent(g.companyId || g.id || '')
             : 'worker-overview.html?id=' + encodeURIComponent(g.companyId || g.id || ''));
-          const badge = isOwner
+          const badge = isCo
+            ? '<span class="text-xs text-vv-green-300 bg-vv-green-500/15 px-2 py-0.5 rounded-full">Co-owner</span>'
+            : isOwner
             ? '<span class="text-xs text-vv-blue-300 bg-vv-blue-500/15 px-2 py-0.5 rounded-full">Owner</span>'
             : '<span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>';
           const title = g.company || g.companyName || 'Company';
@@ -1283,6 +1310,7 @@
         citizens = cit.data.items || [];
         fillCoOwnerSelect();
       }
+      try { await fillApplyCompanies(); } catch (e) { console.warn('apply companies', e); }
 
       try { await loadDashContracts(); }
       catch (e) {

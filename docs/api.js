@@ -238,3 +238,59 @@ window.vvMoney = function (n, opts) {
   }
   return sign + 'Ꝟ' + body;
 };
+
+
+window.VV_mdLite = function (src) {
+  const esc = (s) => String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = (s) => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code class="text-vv-green-400">$1</code>');
+  const lines = String(src || '').replace(/\r\n/g, '\n').split('\n');
+  let html = '';
+  let inList = false;
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, '');
+    if (!line.trim()) { closeList(); continue; }
+    if (/^###\s+/.test(line)) { closeList(); html += '<h3 class="text-sm font-semibold text-white mt-4 mb-1">' + inline(line.replace(/^###\s+/, '')) + '</h3>'; continue; }
+    if (/^##\s+/.test(line)) { closeList(); html += '<h2 class="text-lg font-semibold text-vv-green-400 mt-5 mb-2">' + inline(line.replace(/^##\s+/, '')) + '</h2>'; continue; }
+    if (/^#\s+/.test(line)) { closeList(); html += '<h1 class="text-xl font-bold text-white mb-3">' + inline(line.replace(/^#\s+/, '')) + '</h1>'; continue; }
+    if (/^[-*]\s+/.test(line)) {
+      if (!inList) { html += '<ul class="list-disc pl-5 space-y-1 text-sm text-white/70">'; inList = true; }
+      html += '<li>' + inline(line.replace(/^[-*]\s+/, '')) + '</li>';
+      continue;
+    }
+    closeList();
+    html += '<p class="text-sm text-white/70 leading-relaxed mb-2">' + inline(line) + '</p>';
+  }
+  closeList();
+  return html || '<p class="text-white/40 text-sm">Changelog is empty.</p>';
+};
+
+window.VV_openChangelog = async function () {
+  let modal = document.getElementById('vv-changelog-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'vv-changelog-modal';
+    modal.className = 'hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4';
+    modal.innerHTML = '<div class="max-w-2xl mx-auto mt-16 bg-vv-blue-900 border border-white/10 rounded-2xl p-5 max-h-[80vh] overflow-y-auto">' +
+      '<div class="flex items-center justify-between mb-3">' +
+      '<h2 class="text-sm font-medium text-white/60 uppercase tracking-wider">Changelog</h2>' +
+      '<button type="button" class="text-white/40 hover:text-white text-lg leading-none" onclick="document.getElementById(\'vv-changelog-modal\').classList.add(\'hidden\')">&times;</button>' +
+      '</div><div id="vv-changelog-body" class="text-white/70">Loading…</div></div>';
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+    document.body.appendChild(modal);
+  }
+  modal.classList.remove('hidden');
+  const body = document.getElementById('vv-changelog-body');
+  body.textContent = 'Loading…';
+  try {
+    const res = await fetch('CHANGELOG.md', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Could not load CHANGELOG.md (' + res.status + ')');
+    const text = await res.text();
+    body.innerHTML = window.VV_mdLite(text);
+  } catch (e) {
+    body.innerHTML = '<p class="text-red-400 text-sm">' + (e.message || 'Failed to load changelog') + '</p>';
+  }
+};
