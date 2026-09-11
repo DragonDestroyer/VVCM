@@ -148,15 +148,15 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Citizens on payroll</div>
-          <div class="text-2xl font-bold">4</div>
+          <div class="text-2xl font-bold" id="stat-payroll">—</div>
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Open positions</div>
-          <div class="text-2xl font-bold">1</div>
+          <div class="text-2xl font-bold" id="stat-open-positions">—</div>
         </div>
         <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">This period net</div>
-          <div class="text-2xl font-bold text-vv-green-400 font-mono">+Ꝟ420</div>
+          <div class="text-2xl font-bold text-vv-green-400 font-mono" id="stat-period-net">—</div>
         </div>
       </div>
 
@@ -212,15 +212,8 @@
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5">
         <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Tax reports</h2>
         <p class="text-sm text-white/40 mb-4">Period summaries generated when an administrator closes the civic period.</p>
-        <div class="space-y-2">
-          <div class="flex items-center justify-between bg-vv-blue-950/50 border border-white/5 rounded-xl px-4 py-3 text-sm">
-            <span class="text-white/70">01 Jul 2026 → 31 Jul 2026</span>
-            <span class="font-mono text-vv-green-400">+Ꝟ1,240 net</span>
-          </div>
-          <div class="flex items-center justify-between bg-vv-blue-950/50 border border-white/5 rounded-xl px-4 py-3 text-sm">
-            <span class="text-white/70">01 Jun 2026 → 30 Jun 2026</span>
-            <span class="font-mono text-vv-green-400">+Ꝟ980 net</span>
-          </div>
+        <div id="tax-report-list" class="space-y-2 text-sm text-white/40">
+          No closed periods yet.
         </div>
       </section>
     </div>
@@ -1404,6 +1397,8 @@
           depts.map(d => `<option value="${d.toLowerCase()}">${d}</option>`).join('');
         if (cur) sel.value = cur;
       }
+      const payEl = document.getElementById('stat-payroll');
+      if (payEl) payEl.textContent = String(rows.length);
     }
 
     function renderOpenPositions(company) {
@@ -1441,17 +1436,68 @@
         </div>`).join('');
     }
 
+
+    function fillPeriodAndReports(txs) {
+      const list = Array.isArray(txs) ? txs : [];
+      const now = Date.now();
+      const monthAgo = now - 30 * 24 * 3600 * 1000;
+      let net = 0;
+      for (const t of list) {
+        const at = Date.parse(t.at || t.date || '') || 0;
+        if (at >= monthAgo) net += Number(t.amount || 0);
+      }
+      const el = document.getElementById('stat-period-net');
+      if (el) {
+        const sign = net > 0 ? '+' : '';
+        el.textContent = sign + (typeof moneyTxt === 'function' ? moneyTxt(net) : ('V' + net));
+        el.className = 'text-2xl font-bold font-mono ' + (net >= 0 ? 'text-vv-green-400' : 'text-red-400');
+      }
+      const months = {};
+      for (const t of list) {
+        const d = new Date(t.at || t.date || 0);
+        if (isNaN(d)) continue;
+        const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        months[key] = months[key] || { in: 0, out: 0 };
+        const amt = Number(t.amount || 0);
+        if (amt >= 0) months[key].in += amt;
+        else months[key].out += Math.abs(amt);
+      }
+      const keys = Object.keys(months).sort().reverse().slice(0, 8);
+      const box = document.getElementById('tax-report-list');
+      if (box) {
+        if (!keys.length) {
+          box.innerHTML = '<p class="text-sm text-white/40">No movement recorded for this company yet.</p>';
+        } else {
+          box.innerHTML = keys.map(k => {
+            const [y, m] = k.split('-');
+            const start = new Date(Number(y), Number(m) - 1, 1);
+            const end = new Date(Number(y), Number(m), 0);
+            const fmt = d => d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+            const netm = months[k].in - months[k].out;
+            const sign = netm > 0 ? '+' : '';
+            const cls = netm >= 0 ? 'text-vv-green-400' : 'text-red-400';
+            return `<div class="flex items-center justify-between bg-vv-blue-950/50 border border-white/5 rounded-xl px-4 py-3 text-sm">
+              <span class="text-white/70">${fmt(start)} → ${fmt(end)}</span>
+              <span class="font-mono ${cls}">${sign}${typeof moneyTxt === 'function' ? moneyTxt(netm) : netm} net</span>
+            </div>`;
+          }).join('');
+        }
+      }
+    }
+
     async function loadCompanyLedger() {
       if (!COMPANY.id) return;
       const res = await VV_WORKER.get('/companies/' + encodeURIComponent(COMPANY.id) + '/ledger');
       if (!res.ok) {
         renderCompanyLedger([]);
         applyMovementFromLedger([]);
+        fillPeriodAndReports([]);
         return;
       }
       const items = res.data.items || [];
       renderCompanyLedger(items);
       applyMovementFromLedger(items);
+      fillPeriodAndReports(items);
       if (res.data.balance != null) {
         COMPANY.balance = res.data.balance;
         updateBalanceDisplay();
@@ -1593,7 +1639,11 @@
         bal.textContent = (typeof vvMoney === 'function' ? vvMoney(n, { forceText: true }) : ('Ꝟ' + n.toLocaleString('en-US', { minimumFractionDigits: 2 })));
       }
       const roleBadge = document.getElementById('company-role-badge');
-      if (roleBadge) roleBadge.textContent = COMPANY.role === 'owner' || COMPANY.role === 'Owner' ? 'Owner' : (COMPANY.role || 'Member');
+      if (roleBadge) {
+        roleBadge.textContent = COMPANY.viewingAsAdmin
+          ? 'Admin view'
+          : (COMPANY.role === 'owner' || COMPANY.role === 'Owner' ? 'Owner' : (COMPANY.role || 'Member'));
+      }
 
       // Replace leftover template strings in page copy
       document.querySelectorAll('body *').forEach(el => {

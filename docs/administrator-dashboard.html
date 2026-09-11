@@ -108,10 +108,12 @@
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">Pending applications</div>
           <div class="text-2xl font-bold text-amber-300" id="stat-apps">—</div>
         </div>
-        <div class="bg-vv-blue-900/60 border border-white/10 rounded-xl p-5">
+        <button type="button" id="btn-money-motion" onclick="openMoneyMotion()"
+                class="text-left bg-vv-blue-900/60 border border-white/10 rounded-xl p-5 hover:border-vv-green-500/40 transition">
           <div class="text-xs text-white/40 uppercase tracking-wider mb-1">City money in motion</div>
           <div class="text-2xl font-bold font-mono text-vv-green-400" id="stat-money">—</div>
-        </div>
+          <div class="text-[11px] text-white/30 mt-2">Open transfer list</div>
+        </button>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -590,6 +592,39 @@
     document.getElementById('btn-grant-money')?.addEventListener('click', applyGrantMoney);
     document.getElementById('btn-grant-all')?.addEventListener('click', applyGrantAll);
 
+
+    async function openMoneyMotion() {
+      const modal = document.getElementById('money-motion-modal');
+      const list = document.getElementById('money-motion-list');
+      modal.classList.remove('hidden');
+      list.innerHTML = '<li class="text-white/40">Loading…</li>';
+      try {
+        const res = await VV_WORKER.adminGet('/admin/transfers');
+        const items = (res.ok && res.data && res.data.items) ? res.data.items : [];
+        if (!items.length) {
+          list.innerHTML = '<li class="text-white/40">No transfers recorded yet.</li>';
+          return;
+        }
+        list.innerHTML = items.map(t => {
+          const amt = Number(t.amount || 0);
+          const cls = amt >= 0 ? 'text-vv-green-400' : 'text-red-400';
+          const when = t.at ? new Date(t.at).toLocaleString() : '';
+          return `<li class="flex items-center justify-between gap-3 bg-vv-blue-950/50 border border-white/5 rounded-xl px-3 py-2">
+            <div>
+              <div class="text-white/80">${t.label || t.type || 'Transfer'}</div>
+              <div class="text-[11px] text-white/35">${when}${t.from ? ' · ' + t.from : ''}${t.to ? ' → ' + t.to : ''}</div>
+            </div>
+            <div class="font-mono ${cls}">${money(amt)}</div>
+          </li>`;
+        }).join('');
+      } catch (e) {
+        list.innerHTML = '<li class="text-red-400">Could not load transfers.</li>';
+      }
+    }
+    function closeMoneyMotion() {
+      document.getElementById('money-motion-modal').classList.add('hidden');
+    }
+
     function renderCompanies() {
       const st = sortState.companies;
       const rows = st.key
@@ -603,7 +638,7 @@
           <td class="px-4 py-3">${co.staff}</td>
           <td class="px-4 py-3"><span class="text-xs text-vv-green-400">${co.status}</span></td>
           <td class="px-4 py-3 text-right">
-            <a href="${co.href}" class="text-xs text-vv-blue-300 hover:text-vv-green-400">Open</a>
+            <a href="owner-overview?id=${encodeURIComponent(co.id || '')}" class="text-xs text-vv-blue-300 hover:text-vv-green-400">Open</a>
           </td>
         </tr>
       `).join('');
@@ -655,6 +690,7 @@
       if (approve) {
         const cos = await VV_WORKER.adminGet('/admin/companies');
         if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
+        try { await VV_WORKER.adminPost('/admin/companies/dedupe', {}); } catch (e) {}
         renderCompanies();
       }
       renderApplications();
@@ -782,6 +818,7 @@
         if (typeof refreshGrantDatalist === 'function') refreshGrantDatalist();
       }
       if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
+        try { await VV_WORKER.adminPost('/admin/companies/dedupe', {}); } catch (e) {}
       if (apps.ok && apps.data && apps.data.items) APPLICATIONS = apps.data.items;
       if (reps.ok && reps.data && reps.data.items) REPORT_ROWS = reps.data.items;
       if (stats.ok && stats.data) {
@@ -806,5 +843,17 @@
     }
   </script>
 
+
+  <div id="money-motion-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="max-w-3xl mx-auto mt-10 bg-vv-blue-900 border border-white/10 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-medium text-white/70 uppercase tracking-wider">City transfers</h2>
+        <button type="button" onclick="closeMoneyMotion()" class="text-sm text-white/40 hover:text-white">Close</button>
+      </div>
+      <ul id="money-motion-list" class="space-y-2 text-sm max-h-[70vh] overflow-y-auto vv-scroll">
+        <li class="text-white/40">Loading…</li>
+      </ul>
+    </div>
+  </div>
 </body>
 </html>
