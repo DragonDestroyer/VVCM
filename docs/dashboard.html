@@ -65,7 +65,7 @@
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="font-bold text-lg tracking-tight">
-        <a href="dashboard" class="inline-flex items-center" title="VAULT">
+        <a href="dashboard.html" class="inline-flex items-center" title="VAULT">
           <img src="vault-logo.png" alt="VAULT" class="h-7 sm:h-8 w-auto select-none" draggable="false" />
         </a>
       </div>
@@ -659,6 +659,9 @@
         personalFunds: parseFloat(document.getElementById('co-personal-funds')?.value) || 0,
         requested: parseFloat(document.getElementById('co-requested')?.value) || 0,
         hasLogo: !document.getElementById('logo-preview').classList.contains('hidden'),
+        logo: (document.getElementById('logo-preview') && !document.getElementById('logo-preview').classList.contains('hidden'))
+          ? document.getElementById('logo-preview').src
+          : '',
       };
     }
 
@@ -668,10 +671,23 @@
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (e) => {
-        const img = document.getElementById('logo-preview');
-        img.src = e.target.result;
-        img.classList.remove('hidden');
-        document.getElementById('logo-placeholder').classList.add('hidden');
+        const imgEl = new Image();
+        imgEl.onload = () => {
+          const canvas = document.createElement('canvas');
+          const size = 256;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          const min = Math.min(imgEl.width, imgEl.height);
+          const sx = (imgEl.width - min) / 2;
+          const sy = (imgEl.height - min) / 2;
+          ctx.drawImage(imgEl, sx, sy, min, min, 0, 0, size, size);
+          const img = document.getElementById('logo-preview');
+          img.src = canvas.toDataURL('image/jpeg', 0.72);
+          img.classList.remove('hidden');
+          document.getElementById('logo-placeholder').classList.add('hidden');
+        };
+        imgEl.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -1234,7 +1250,7 @@
               companyId: c.id,
               company: c.name,
               role: (c.role === 'owner' || c.role === 'Owner') ? 'Owner' : (c.role || 'Member'),
-              href: 'owner-overview?id=' + encodeURIComponent(c.id),
+              href: 'owner-overview.html?id=' + encodeURIComponent(c.id),
             });
           }
         }
@@ -1243,8 +1259,8 @@
         gigsEl.innerHTML = glist.length ? glist.map(g => {
           const isOwner = String(g.role || '').toLowerCase() === 'owner';
           const href = g.href || (isOwner
-            ? 'owner-overview?id=' + encodeURIComponent(g.companyId || g.id || '')
-            : 'worker-overview?id=' + encodeURIComponent(g.companyId || g.id || ''));
+            ? 'owner-overview.html?id=' + encodeURIComponent(g.companyId || g.id || '')
+            : 'worker-overview.html?id=' + encodeURIComponent(g.companyId || g.id || ''));
           const badge = isOwner
             ? '<span class="text-xs text-vv-blue-300 bg-vv-blue-500/15 px-2 py-0.5 rounded-full">Owner</span>'
             : '<span class="text-xs text-vv-green-400 bg-vv-green-500/10 px-2 py-0.5 rounded-full">Active</span>';

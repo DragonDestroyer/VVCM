@@ -63,8 +63,8 @@
 
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="dashboard" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
-        <a href="dashboard" class="inline-flex items-center" title="VAULT">
+      <a href="dashboard.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
+        <a href="dashboard.html" class="inline-flex items-center" title="VAULT">
           <img src="vault-logo.png" alt="VAULT" class="h-7 sm:h-8 w-auto select-none" draggable="false" />
         </a>
       </a>
@@ -81,7 +81,7 @@
 
   <main class="max-w-5xl mx-auto px-4 py-8">
 
-    <a href="dashboard" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
+    <a href="dashboard.html" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
       Back to dashboard
     </a>
@@ -296,7 +296,12 @@
       document.title = (c.name || 'Workplace') + ' · Worker · VAULT';
       document.getElementById('company-name').textContent = c.name || 'Company';
       document.getElementById('company-desc').textContent = c.description || 'No description provided.';
-      document.getElementById('company-logo').textContent = initials(c.name);
+      const logoEl = document.getElementById('company-logo');
+      if (c.logo && String(c.logo).startsWith('data:image') && logoEl) {
+        logoEl.innerHTML = '<img src="' + c.logo + '" alt="" class="w-full h-full object-cover rounded-2xl" />';
+      } else if (logoEl) {
+        logoEl.textContent = initials(c.name);
+      }
       document.getElementById('worker-role-badge').textContent = c.role || 'Worker';
       document.getElementById('worker-dept-badge').textContent = c.department || 'General';
       document.getElementById('roster-dept-title').textContent = c.department || 'Department';

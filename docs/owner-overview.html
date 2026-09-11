@@ -70,8 +70,8 @@
   <!-- Header -->
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="dashboard" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
-        <a href="dashboard" class="inline-flex items-center" title="VAULT">
+      <a href="dashboard.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
+        <a href="dashboard.html" class="inline-flex items-center" title="VAULT">
           <img src="vault-logo.png" alt="VAULT" class="h-7 sm:h-8 w-auto select-none" draggable="false" />
         </a>
       </a>
@@ -89,7 +89,7 @@
   <main class="max-w-5xl mx-auto px-4 py-8">
 
     <!-- Back link -->
-    <a href="dashboard" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
+    <a href="dashboard.html" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
       Back to dashboard
     </a>
@@ -370,7 +370,26 @@
 
     <!-- ========== MANAGE (owner tools) ========== -->
     <div id="panel-manage" class="panel space-y-6">
-      <p class="text-sm text-white/45">Owner tools for this company. Actions are stored locally for now and prepared for database export.</p>
+      <p class="text-sm text-white/45">Owner and co-owner tools for this company.</p>
+
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-lg font-semibold">Departments &amp; roles</h2>
+            <p class="text-sm text-white/45">Change titles, pay, leader flags, and departments after the company exists.</p>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" onclick="addManageDept()" class="text-sm border border-white/15 px-3 py-2 rounded-xl hover:border-vv-green-500/40">Add department</button>
+            <label class="text-sm border border-white/15 px-3 py-2 rounded-xl cursor-pointer hover:border-vv-green-500/40">
+              Change picture
+              <input type="file" accept="image/*" class="hidden" onchange="updateCompanyLogo(event)" />
+            </label>
+            <button type="button" onclick="saveCompanyStructure()" class="text-sm bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold px-4 py-2 rounded-xl">Save structure</button>
+          </div>
+        </div>
+        <p id="structure-status" class="text-xs text-white/40"></p>
+        <div id="manage-structure" class="space-y-4"></div>
+      </section>
 
       <!-- Contracts hub -->
       <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
@@ -1590,6 +1609,138 @@
       }
     }
 
+
+    function setCompanyLogo(logo, name) {
+      const logoEl = document.getElementById('company-logo');
+      if (!logoEl) return;
+      if (logo && String(logo).startsWith('data:image')) {
+        logoEl.innerHTML = '<img src="' + logo + '" alt="" class="w-full h-full object-cover rounded-2xl" />';
+        logoEl.classList.remove('flex', 'items-center', 'justify-center', 'text-2xl');
+      } else {
+        logoEl.textContent = initials(name);
+        logoEl.classList.add('flex', 'items-center', 'justify-center');
+      }
+    }
+
+    function renderManageStructure(company) {
+      const wrap = document.getElementById('manage-structure');
+      if (!wrap) return;
+      const depts = Array.isArray(company.departments) ? company.departments : [];
+      if (!depts.length) {
+        wrap.innerHTML = '<p class="text-sm text-white/40">No departments yet. Add one to start assigning roles.</p>';
+        return;
+      }
+      wrap.innerHTML = depts.map((d, di) => `
+        <div class="border border-white/10 rounded-xl p-4 space-y-3" data-dept-index="${di}">
+          <div class="flex gap-2 items-center">
+            <input data-dept-name class="flex-1 bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" value="${String(d.name || '').replace(/"/g, '&quot;')}" />
+            <button type="button" onclick="removeManageDept(${di})" class="text-xs text-red-400">Remove</button>
+          </div>
+          <div class="space-y-2" data-roles>
+            ${(d.roles || d.jobs || []).map((r, ri) => `
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center" data-role-index="${ri}">
+                <input data-role-title class="sm:col-span-5 bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" value="${String(r.role || r.name || '').replace(/"/g, '&quot;')}" placeholder="Title" />
+                <input data-role-pay type="number" min="0" class="sm:col-span-3 bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" value="${r.salary ?? r.rate ?? 0}" placeholder="Pay /h" />
+                <label class="sm:col-span-3 text-xs text-white/60 flex items-center gap-2">
+                  <input type="checkbox" data-role-leader ${r.isLeader ? 'checked' : ''} /> Leader
+                </label>
+                <button type="button" onclick="removeManageRole(${di},${ri})" class="sm:col-span-1 text-xs text-red-400">✕</button>
+              </div>
+            `).join('')}
+          </div>
+          <button type="button" onclick="addManageRole(${di})" class="text-xs text-vv-green-400">+ Add role</button>
+        </div>
+      `).join('');
+    }
+
+    function collectManageStructure() {
+      const depts = [];
+      document.querySelectorAll('#manage-structure [data-dept-index]').forEach((col, di) => {
+        const prev = (COMPANY.departments || [])[di] || {};
+        const roles = [];
+        col.querySelectorAll('[data-role-index]').forEach((row, ri) => {
+          const prevRole = ((prev.roles || prev.jobs || [])[ri]) || {};
+          roles.push({
+            ...prevRole,
+            role: row.querySelector('[data-role-title]').value.trim(),
+            name: row.querySelector('[data-role-title]').value.trim(),
+            salary: parseFloat(row.querySelector('[data-role-pay]').value) || 0,
+            isLeader: row.querySelector('[data-role-leader]').checked,
+          });
+        });
+        depts.push({
+          ...prev,
+          name: col.querySelector('[data-dept-name]').value.trim() || 'Department',
+          roles,
+        });
+      });
+      return depts;
+    }
+
+    function addManageDept() {
+      COMPANY.departments = collectManageStructure();
+      COMPANY.departments.push({ id: 'dept_' + Date.now(), name: 'New department', roles: [] });
+      renderManageStructure(COMPANY);
+    }
+    function removeManageDept(i) {
+      COMPANY.departments = collectManageStructure();
+      COMPANY.departments.splice(i, 1);
+      renderManageStructure(COMPANY);
+    }
+    function addManageRole(i) {
+      COMPANY.departments = collectManageStructure();
+      COMPANY.departments[i].roles = COMPANY.departments[i].roles || [];
+      COMPANY.departments[i].roles.push({ role: 'New role', salary: 0, isLeader: false, members: [] });
+      renderManageStructure(COMPANY);
+    }
+    function removeManageRole(di, ri) {
+      COMPANY.departments = collectManageStructure();
+      COMPANY.departments[di].roles.splice(ri, 1);
+      renderManageStructure(COMPANY);
+    }
+    async function updateCompanyLogo(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file || !COMPANY.id) return;
+      const status = document.getElementById('structure-status');
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const imgEl = new Image();
+        imgEl.onload = async () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 256; canvas.height = 256;
+          const ctx = canvas.getContext('2d');
+          const min = Math.min(imgEl.width, imgEl.height);
+          ctx.drawImage(imgEl, (imgEl.width-min)/2, (imgEl.height-min)/2, min, min, 0, 0, 256, 256);
+          const logo = canvas.toDataURL('image/jpeg', 0.72);
+          status.textContent = 'Uploading picture…';
+          const res = await VV_WORKER.post('/companies/' + encodeURIComponent(COMPANY.id) + '/structure', { logo });
+          if (!res.ok) { status.textContent = res.error || 'Upload failed'; return; }
+          COMPANY.logo = logo;
+          setCompanyLogo(logo, COMPANY.name);
+          status.textContent = 'Picture updated.';
+        };
+        imgEl.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    async function saveCompanyStructure() {
+      const status = document.getElementById('structure-status');
+      if (!COMPANY.id) return;
+      const departments = collectManageStructure();
+      status.textContent = 'Saving…';
+      const res = await VV_WORKER.post('/companies/' + encodeURIComponent(COMPANY.id) + '/structure', { departments });
+      if (!res.ok) {
+        status.textContent = res.error || res.data?.error || 'Save failed';
+        status.className = 'text-xs text-red-400';
+        return;
+      }
+      COMPANY.departments = departments;
+      renderCompanyRoster(COMPANY);
+      renderOpenPositions(COMPANY);
+      status.textContent = 'Structure saved.';
+      status.className = 'text-xs text-vv-green-400';
+    }
+
     async function loadOwnerOverview() {
       if (!window.VV_LEDGER_URL) {
         const h = document.getElementById('company-name');
@@ -1632,8 +1783,8 @@
       if (descEl) descEl.textContent = COMPANY.description || 'No description provided.';
       const idEl = document.getElementById('company-id');
       if (idEl) idEl.textContent = COMPANY.id || '—';
-      const logoEl = document.getElementById('company-logo');
-      if (logoEl) logoEl.textContent = initials(COMPANY.name);
+      setCompanyLogo(COMPANY.logo, COMPANY.name);
+      renderManageStructure(COMPANY);
       const bal = document.getElementById('company-balance');
       const pb = document.getElementById('pay-company-balance');
       if (pb) pb.textContent = moneyTxt(Number(COMPANY.balance || 0));
