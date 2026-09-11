@@ -415,7 +415,7 @@
           if (detail && detail !== '{}') lines.push('    ' + detail);
         }
       }
-      out.textContent = lines.join('\\n');
+      out.textContent = lines.join(String.fromCharCode(10));
     };
 
     async function loadAssignLists() {
