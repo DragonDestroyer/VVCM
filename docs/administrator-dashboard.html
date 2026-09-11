@@ -63,7 +63,7 @@
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <a href="index.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
-        <a href="dashboard" class="inline-flex items-center" title="VAULT">
+        <a href="dashboard.html" class="inline-flex items-center" title="VAULT">
           <img src="vault-logo.png" alt="VAULT" class="h-7 sm:h-8 w-auto select-none" draggable="false" />
         </a>
       </a>
@@ -132,9 +132,9 @@
       </div>
 
       <div class="flex flex-wrap gap-3">
-        <a href="dashboard" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Open citizen dashboard</a>
-        <a href="owner-overview" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Sample owner view</a>
-        <a href="worker-overview" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Sample worker view</a>
+        <a href="dashboard.html" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Open citizen dashboard</a>
+        <a href="owner-overview.html" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Sample owner view</a>
+        <a href="worker-overview.html" class="text-sm border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl transition">Sample worker view</a>
       </div>
     </div>
 
@@ -658,10 +658,15 @@
         return;
       }
       closeDeleteCompany();
-      COMPANIES = COMPANIES.filter(c => c.id !== res.data?.deleted?.id);
+      const gone = (res.data && res.data.deletedAll) || (res.data && res.data.deleted ? [res.data.deleted] : []);
+      const ids = new Set(gone.map(g => g.id));
+      COMPANIES = COMPANIES.filter(c => !ids.has(c.id) && normName(c.name) !== normName(pendingDelete.name));
       renderCompanies();
     }
 
+    function normName(n) {
+      return String(n || '').toLowerCase().replace(/[™®©]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+    }
     function renderCompanies() {
       const st = sortState.companies;
       const rows = st.key
@@ -689,7 +694,12 @@
         list.innerHTML = '<p class="text-sm text-white/40">No pending applications.</p>';
         return;
       }
-      list.innerHTML = APPLICATIONS.map(a => `
+      const pending = APPLICATIONS.filter(a => String(a.status || 'pending').toLowerCase() === 'pending');
+      if (!pending.length) {
+        list.innerHTML = '<p class="text-sm text-white/40">No pending applications.</p>';
+        return;
+      }
+      list.innerHTML = pending.map(a => `
         <article class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-5" id="app-${a.id}">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
             <div>
