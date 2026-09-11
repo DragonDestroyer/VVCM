@@ -1250,14 +1250,17 @@
               companyId: c.id,
               company: c.name,
               role: (c.role === 'owner' || c.role === 'Owner') ? 'Owner' : (c.role || 'Member'),
-              href: 'owner-overview.html?id=' + encodeURIComponent(c.id),
+              href: (String(c.role||'').toLowerCase().includes('owner')
+                ? 'owner-overview.html?id='
+                : 'worker-overview.html?id=') + encodeURIComponent(c.id),
             });
           }
         }
       }
       if (gigsEl) {
         gigsEl.innerHTML = glist.length ? glist.map(g => {
-          const isOwner = String(g.role || '').toLowerCase() === 'owner';
+          const roleLc = String(g.role || '').toLowerCase();
+          const isOwner = roleLc === 'owner' || roleLc === 'co-owner' || roleLc === 'coowner';
           const href = g.href || (isOwner
             ? 'owner-overview.html?id=' + encodeURIComponent(g.companyId || g.id || '')
             : 'worker-overview.html?id=' + encodeURIComponent(g.companyId || g.id || ''));
