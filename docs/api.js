@@ -21,12 +21,63 @@ window.VV_WORKER = {
     window.VV_AUTH_URL = v;
   },
 
-  getToken() {
+  AUTH_MS: 72 * 60 * 60 * 1000,
+
+  _read(key) {
     try {
-      return sessionStorage.getItem('vv_token') || '';
-    } catch {
+      const local = localStorage.getItem(key);
+      if (local) return local;
+      const sess = sessionStorage.getItem(key);
+      if (sess) {
+        localStorage.setItem(key, sess);
+        sessionStorage.removeItem(key);
+        return sess;
+      }
+    } catch {}
+    return '';
+  },
+
+  getToken() {
+    const token = this._read('vv_token');
+    const until = Number(this._read('vv_token_exp') || 0);
+    if (token && until && Date.now() > until) {
+      this.clearAuth();
       return '';
     }
+    return token || '';
+  },
+
+  setAuth(token, citizen) {
+    try {
+      if (token) {
+        localStorage.setItem('vv_token', token);
+        localStorage.setItem('vv_token_exp', String(Date.now() + this.AUTH_MS));
+        sessionStorage.removeItem('vv_token');
+      }
+      if (citizen) {
+        localStorage.setItem('vv_citizen', JSON.stringify(citizen));
+        sessionStorage.removeItem('vv_citizen');
+      }
+    } catch {}
+  },
+
+  getCitizen() {
+    try {
+      const raw = this._read('vv_citizen');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  clearAuth() {
+    try {
+      localStorage.removeItem('vv_token');
+      localStorage.removeItem('vv_token_exp');
+      localStorage.removeItem('vv_citizen');
+      sessionStorage.removeItem('vv_token');
+      sessionStorage.removeItem('vv_citizen');
+    } catch {}
   },
 
   async request(base, method, path, body, timeoutMs) {

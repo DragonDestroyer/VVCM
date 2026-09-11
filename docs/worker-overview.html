@@ -257,7 +257,7 @@
     }
 
     async function loadWorkerOverview() {
-      if (!sessionStorage.getItem('vv_token')) {
+      if (!(window.VV_WORKER && VV_WORKER.getToken && VV_WORKER.getToken())) {
         window.location.href = 'index.html';
         return;
       }

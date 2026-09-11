@@ -368,8 +368,7 @@
           return;
         }
         try {
-          if (result.token) sessionStorage.setItem('vv_token', result.token);
-          if (result.citizen) sessionStorage.setItem('vv_citizen', JSON.stringify(result.citizen));
+          if (result.token || result.citizen) VV_WORKER.setAuth(result.token, result.citizen);
         } catch (_) {}
         window.location.href = 'dashboard';
       } catch (err) {

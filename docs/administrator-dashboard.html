@@ -769,7 +769,7 @@
     }
 
     function requireAdminSession() {
-      const token = sessionStorage.getItem('vv_token');
+      const token = (window.VV_WORKER && VV_WORKER.getToken()) || '';
       if (!token) {
         window.location.replace('index.html');
         return false;

@@ -928,7 +928,7 @@
     }
 
     function requireSession() {
-      const token = sessionStorage.getItem('vv_token');
+      const token = (window.VV_WORKER && VV_WORKER.getToken()) || '';
       if (!token) {
         window.location.href = 'index.html';
         return false;
@@ -1185,20 +1185,19 @@
 
       // optimistic paint from login payload
       try {
-        const cached = JSON.parse(sessionStorage.getItem('vv_citizen') || 'null');
+        const cached = (window.VV_WORKER && VV_WORKER.getCitizen && VV_WORKER.getCitizen()) || null;
         if (cached) applyUser(cached);
       } catch (_) {}
 
       const me = await VV_WORKER.get('/me');
       if (me.status === 401) {
-        sessionStorage.removeItem('vv_token');
-        sessionStorage.removeItem('vv_citizen');
+        if (window.VV_WORKER && VV_WORKER.clearAuth) VV_WORKER.clearAuth();
         window.location.href = 'index.html';
         return;
       }
       if (me.ok && me.data) {
         applyUser(me.data);
-        try { sessionStorage.setItem('vv_citizen', JSON.stringify(me.data)); } catch (_) {}
+        try { VV_WORKER.setAuth(null, me.data); } catch (_) {}
       }
 
       const act = await VV_WORKER.get('/me/activity');
@@ -1260,8 +1259,7 @@
     }
 
     document.getElementById('btn-signout')?.addEventListener('click', () => {
-      sessionStorage.removeItem('vv_token');
-      sessionStorage.removeItem('vv_citizen');
+      if (window.VV_WORKER && VV_WORKER.clearAuth) VV_WORKER.clearAuth();
     });
     document.addEventListener('DOMContentLoaded', loadDashboard);
   </script>
