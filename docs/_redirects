@@ -1,0 +1,16 @@
+# Pretty URLs for Cloudflare Pages
+/dashboard           /dashboard.html          200
+/owner-overview      /owner-overview.html     200
+/worker-overview     /worker-overview.html    200
+/dashboard/          /dashboard.html          200
+/owner-overview/     /owner-overview.html     200
+/worker-overview/    /worker-overview.html    200
+/contract-overview      /contract-overview.html     200
+/contract-overview/     /contract-overview.html     200
+/administrator-dashboard      /administrator-dashboard.html     200
+/administrator-dashboard/     /administrator-dashboard.html     200
+/admin      /administrator-dashboard.html     200
+
+/overlord-dashboard      /overlord-dashboard.html     200
+/overlord-dashboard/     /overlord-dashboard.html     200
+/overlord      /overlord-dashboard.html     200

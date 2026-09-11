@@ -1596,9 +1596,12 @@
         if (h) h.textContent = 'Ledger offline';
         return;
       }
-      const token = sessionStorage.getItem('vv_token');
+      const token = (window.VV_WORKER && VV_WORKER.getToken && VV_WORKER.getToken())
+        || localStorage.getItem('vv_token')
+        || sessionStorage.getItem('vv_token')
+        || '';
       if (!token) {
-        window.location.href = 'index.html';
+        window.location.href = 'index.html?next=' + encodeURIComponent(location.pathname + location.search);
         return;
       }
 

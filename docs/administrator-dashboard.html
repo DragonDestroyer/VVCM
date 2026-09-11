@@ -625,6 +625,43 @@
       document.getElementById('money-motion-modal').classList.add('hidden');
     }
 
+
+    let pendingDelete = null;
+    function confirmDeleteCompany(id, name) {
+      pendingDelete = { id, name };
+      document.getElementById('delete-company-target').textContent = name;
+      document.getElementById('delete-company-input').value = '';
+      document.getElementById('delete-company-status').textContent = '';
+      document.getElementById('delete-company-modal').classList.remove('hidden');
+    }
+    function closeDeleteCompany() {
+      pendingDelete = null;
+      document.getElementById('delete-company-modal').classList.add('hidden');
+    }
+    async function submitDeleteCompany() {
+      const status = document.getElementById('delete-company-status');
+      if (!pendingDelete) return;
+      const typed = document.getElementById('delete-company-input').value.trim();
+      if (typed.toLowerCase() !== String(pendingDelete.name || '').trim().toLowerCase()) {
+        status.textContent = 'Name does not match.';
+        status.className = 'text-xs text-amber-300';
+        return;
+      }
+      status.textContent = 'Deleting…';
+      const res = await VV_WORKER.adminPost('/admin/company/delete', {
+        id: pendingDelete.id,
+        confirmName: typed,
+      });
+      if (!res.ok) {
+        status.textContent = res.error || res.data?.error || 'Delete failed';
+        status.className = 'text-xs text-red-400';
+        return;
+      }
+      closeDeleteCompany();
+      COMPANIES = COMPANIES.filter(c => c.id !== res.data?.deleted?.id);
+      renderCompanies();
+    }
+
     function renderCompanies() {
       const st = sortState.companies;
       const rows = st.key
@@ -637,8 +674,10 @@
           <td class="px-4 py-3 font-mono text-vv-green-400">${money(co.balance)}</td>
           <td class="px-4 py-3">${co.staff}</td>
           <td class="px-4 py-3"><span class="text-xs text-vv-green-400">${co.status}</span></td>
-          <td class="px-4 py-3 text-right">
-            <a href="owner-overview?id=${encodeURIComponent(co.id || '')}" class="text-xs text-vv-blue-300 hover:text-vv-green-400">Open</a>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            <a href="owner-overview.html?id=${encodeURIComponent(co.id || '')}" class="text-xs text-vv-blue-300 hover:text-vv-green-400">Open</a>
+            <button type="button" data-id="${co.id || ''}" data-name="${String(co.name || '').replace(/"/g, '&quot;')}" onclick="confirmDeleteCompany(this.dataset.id, this.dataset.name)"
+                    class="ml-2 text-xs text-red-400 hover:text-red-300">Delete</button>
           </td>
         </tr>
       `).join('');
@@ -689,8 +728,15 @@
       APPLICATIONS.splice(idx, 1);
       if (approve) {
         const cos = await VV_WORKER.adminGet('/admin/companies');
-        if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
         try { await VV_WORKER.adminPost('/admin/companies/dedupe', {}); } catch (e) {}
+      const cos2 = await VV_WORKER.adminGet('/admin/companies');
+      if ((cos2.ok && cos2.data && cos2.data.items) || (cos.ok && cos.data && cos.data.items)) {
+        COMPANIES = (cos2.ok && cos2.data && cos2.data.items) ? cos2.data.items : cos.data.items;
+        COMPANIES = COMPANIES.filter(c => {
+          const st = String(c.status || 'Active').toLowerCase();
+          return st !== 'pending' && st !== 'draft' && st !== 'applied';
+        });
+      }
         renderCompanies();
       }
       renderApplications();
@@ -817,8 +863,15 @@
         CITIZENS = cits.data.items;
         if (typeof refreshGrantDatalist === 'function') refreshGrantDatalist();
       }
-      if (cos.ok && cos.data && cos.data.items) COMPANIES = cos.data.items;
-        try { await VV_WORKER.adminPost('/admin/companies/dedupe', {}); } catch (e) {}
+      try { await VV_WORKER.adminPost('/admin/companies/dedupe', {}); } catch (e) {}
+      const cos2 = await VV_WORKER.adminGet('/admin/companies');
+      if ((cos2.ok && cos2.data && cos2.data.items) || (cos.ok && cos.data && cos.data.items)) {
+        COMPANIES = (cos2.ok && cos2.data && cos2.data.items) ? cos2.data.items : cos.data.items;
+        COMPANIES = COMPANIES.filter(c => {
+          const st = String(c.status || 'Active').toLowerCase();
+          return st !== 'pending' && st !== 'draft' && st !== 'applied';
+        });
+      }
       if (apps.ok && apps.data && apps.data.items) APPLICATIONS = apps.data.items;
       if (reps.ok && reps.data && reps.data.items) REPORT_ROWS = reps.data.items;
       if (stats.ok && stats.data) {
@@ -853,6 +906,21 @@
       <ul id="money-motion-list" class="space-y-2 text-sm max-h-[70vh] overflow-y-auto vv-scroll">
         <li class="text-white/40">Loading…</li>
       </ul>
+    </div>
+  </div>
+
+  <div id="delete-company-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4">
+    <div class="max-w-md mx-auto mt-24 bg-vv-blue-900 border border-red-500/30 rounded-2xl p-5 space-y-4">
+      <h2 class="text-sm font-medium text-red-400 uppercase tracking-wider">Delete company</h2>
+      <p class="text-sm text-white/60">This removes the company from VAULT. Type the exact company name to confirm.</p>
+      <p id="delete-company-target" class="text-sm font-medium text-white"></p>
+      <input id="delete-company-input" type="text" placeholder="Company name"
+             class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" />
+      <p id="delete-company-status" class="text-xs text-white/40"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeDeleteCompany()" class="text-sm px-4 py-2 rounded-xl border border-white/15">Cancel</button>
+        <button type="button" onclick="submitDeleteCompany()" class="text-sm px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold">Delete</button>
+      </div>
     </div>
   </div>
 </body>

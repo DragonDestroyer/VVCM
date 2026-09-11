@@ -259,13 +259,16 @@
           <!-- 4. Co-owners -->
           <section>
             <label class="block text-xs text-white/50 uppercase tracking-wider mb-1.5">Co-owner(s)</label>
-            <p class="text-xs text-white/35 mb-2">Search and select a registered citizen. Free-typed names are not allowed.</p>
-            <div class="relative">
-              <input type="text" id="co-owner-search" placeholder="Search citizens…"
-                     class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50"
-                     oninput="filterCoOwners(this.value)" autocomplete="off" />
-              <ul id="co-owner-dropdown"
-                  class="absolute z-20 left-0 right-0 mt-1 bg-vv-blue-900 border border-white/10 rounded-xl shadow-xl max-h-40 overflow-y-auto hidden"></ul>
+            <p class="text-xs text-white/35 mb-2">Pick a registered citizen from the list. You can add more than one.</p>
+            <div class="flex gap-2">
+              <select id="co-owner-select"
+                      class="flex-1 bg-vv-blue-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vv-green-500/50">
+                <option value="">Select a citizen…</option>
+              </select>
+              <button type="button" onclick="addCoOwnerFromSelect()"
+                      class="shrink-0 bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2.5 rounded-xl">
+                Add
+              </button>
             </div>
             <div id="co-owner-list" class="flex flex-wrap gap-2 mt-3"></div>
           </section>
@@ -524,6 +527,7 @@
     }
 
     function openCreateCompany() {
+      fillCoOwnerSelect();
       if (pendingCompanyApp) {
         alert('You already have a company application pending review.');
         return;
@@ -699,53 +703,58 @@
       });
     })();
 
-    /* Co-owners — select only from citizen list, no free typing */
-    function filterCoOwners(query) {
-      const dropdown = document.getElementById('co-owner-dropdown');
-      if (!query.trim()) {
-        dropdown.classList.add('hidden');
-        return;
-      }
-      const q = query.toLowerCase();
-      const matches = citizens
-        .filter(n => !coOwners.includes(n))
-        .map(name => ({ name, score: name.toLowerCase().startsWith(q) ? 2 : name.toLowerCase().includes(q) ? 1 : 0 }))
-        .filter(m => m.score > 0)
-        .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
-
-      dropdown.innerHTML = matches.length
-        ? matches.map(m =>
-            `<li class="px-4 py-2.5 text-sm hover:bg-vv-green-500/10 cursor-pointer transition"
-                 onclick="addCoOwner('${m.name}')">${m.name}</li>`
-          ).join('')
-        : '<li class="px-4 py-3 text-sm text-white/40">No matching citizens</li>';
-      dropdown.classList.remove('hidden');
+    function citizenLabel(c) {
+      if (!c) return '';
+      if (typeof c === 'string') return c;
+      return c.displayName || c.name || c.username || c.handle || '';
     }
-
+    function citizenKey(c) {
+      if (!c) return '';
+      if (typeof c === 'string') return c.toLowerCase();
+      return String(c.username || c.handle || c.displayName || c.name || '').toLowerCase();
+    }
+    function fillCoOwnerSelect() {
+      const sel = document.getElementById('co-owner-select');
+      if (!sel) return;
+      const rows = (citizens || [])
+        .map(c => ({ key: citizenKey(c), label: citizenLabel(c) }))
+        .filter(r => r.key && !coOwners.includes(r.key))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      sel.innerHTML = '<option value="">Select a citizen…</option>' +
+        rows.map(r => `<option value="${r.key}">${r.label} (@${r.key})</option>`).join('');
+    }
+    function addCoOwnerFromSelect() {
+      const sel = document.getElementById('co-owner-select');
+      const key = (sel && sel.value || '').trim().toLowerCase();
+      if (!key) return;
+      addCoOwner(key);
+    }
     function addCoOwner(name) {
-      // only accept names that exist in the citizens list
-      if (!citizens.includes(name)) return;
-      if (!coOwners.includes(name)) {
-        coOwners.push(name);
+      const key = String(name || '').toLowerCase();
+      const known = (citizens || []).some(c => citizenKey(c) === key || String(c).toLowerCase() === key);
+      if (!known) return;
+      if (!coOwners.includes(key)) {
+        coOwners.push(key);
         renderCoOwners();
       }
-      document.getElementById('co-owner-search').value = '';
-      document.getElementById('co-owner-dropdown').classList.add('hidden');
+      fillCoOwnerSelect();
     }
-
     function removeCoOwner(name) {
       coOwners = coOwners.filter(n => n !== name);
       renderCoOwners();
+      fillCoOwnerSelect();
     }
-
     function renderCoOwners() {
       const list = document.getElementById('co-owner-list');
-      list.innerHTML = coOwners.map(n =>
-        `<span class="inline-flex items-center gap-1.5 bg-vv-blue-800/60 border border-white/10 rounded-full px-3 py-1 text-sm">
-          ${n}
+      if (!list) return;
+      list.innerHTML = coOwners.map(n => {
+        const row = (citizens || []).find(c => citizenKey(c) === n);
+        const label = citizenLabel(row) || n;
+        return `<span class="inline-flex items-center gap-1.5 bg-vv-blue-800/60 border border-white/10 rounded-full px-3 py-1 text-sm">
+          ${label}
           <button type="button" onclick="removeCoOwner('${n}')" class="text-white/40 hover:text-red-400 leading-none">&times;</button>
-        </span>`
-      ).join('');
+        </span>`;
+      }).join('');
     }
 
     /* Departments + drag & drop */
@@ -899,9 +908,6 @@
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#pay-search') && !e.target.closest('#citizen-dropdown')) {
         document.getElementById('citizen-dropdown')?.classList.add('hidden');
-      }
-      if (!e.target.closest('#co-owner-search') && !e.target.closest('#co-owner-dropdown')) {
-        document.getElementById('co-owner-dropdown')?.classList.add('hidden');
       }
     });
   </script>
@@ -1255,6 +1261,7 @@
       const cit = await VV_WORKER.get('/citizens');
       if (cit.ok && cit.data && Array.isArray(cit.data.items)) {
         citizens = cit.data.items || [];
+        fillCoOwnerSelect();
       }
     }
 

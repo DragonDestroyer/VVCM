@@ -8,6 +8,17 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <script src="api.js"></script>
+  <script>
+    (function () {
+      try {
+        const token = (window.VV_WORKER && VV_WORKER.getToken && VV_WORKER.getToken()) || localStorage.getItem('vv_token');
+        if (!token) return;
+        const next = new URLSearchParams(location.search).get('next') || '';
+        if (next && /(owner|worker|contract)-overview/.test(next)) location.replace(next);
+      } catch (e) {}
+    })();
+  </script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
