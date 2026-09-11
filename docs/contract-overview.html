@@ -31,10 +31,18 @@
   <style>
     body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .vv-bg {
-      background:
-        radial-gradient(ellipse 70% 40% at 50% -10%, rgba(29,111,184,0.20), transparent),
-        radial-gradient(ellipse 50% 30% at 80% 110%, rgba(16,185,129,0.10), transparent),
-        #020617;
+      background-color: #020617;
+      background-image: linear-gradient(
+        180deg,
+        #143a66 0%,
+        #071427 42%,
+        #020617 50%,
+        #071427 58%,
+        #143a66 100%
+      );
+      background-size: 100% 1600px;
+      background-repeat: repeat-y;
+      background-attachment: scroll;
     }
     .vv-scroll {
       scrollbar-width: thin;
@@ -57,13 +65,13 @@
 
   <header class="border-b border-white/5 bg-vv-blue-950/80 backdrop-blur sticky top-0 z-40">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="dashboard" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
-        <a href="dashboard" class="inline-flex items-center" title="VAULT">
+      <a href="dashboard.html" class="font-bold text-lg tracking-tight hover:opacity-90 transition">
+        <a href="dashboard.html" class="inline-flex items-center" title="VAULT">
           <img src="vault-logo.png" alt="VAULT" class="h-7 sm:h-8 w-auto select-none" draggable="false" />
         </a>
       </a>
       <div class="flex items-center gap-3">
-        <a href="administrator-dashboard" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
+        <a href="administrator-dashboard.html" id="admin-panel-btn" class="hidden text-xs text-white/25 hover:text-amber-300 transition tracking-wide"
            title="Administrator panel">Admin Panel</a>
 
         <img src="https://cdn.discordapp.com/embed/avatars/2.png" class="w-8 h-8 rounded-full ring-1 ring-vv-green-500/50" alt="" />
@@ -75,7 +83,7 @@
 
   <main class="max-w-5xl mx-auto px-4 py-8">
 
-    <a href="owner-overview" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
+    <a href="owner-overview.html" class="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-vv-green-400 transition mb-6">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
       Back to company
     </a>
