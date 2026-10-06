@@ -1,4 +1,5 @@
 /**
+ * Working on github pages now
  * VAULT Admin Worker (separate from verify-bot and vault-ledger)
  *
  * Cloudflare: create Worker e.g. "vault-admin"

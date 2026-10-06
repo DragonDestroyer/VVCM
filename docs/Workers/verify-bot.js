@@ -1,4 +1,5 @@
 /**
+ * Working on github pages now
  * VAULT verify-bot + ledger
  * Paste entire file into Cloudflare Worker verify-bot → Save and deploy
  *

@@ -1,4 +1,5 @@
 /**
+ * Working on github pages now
  * VAULT Ledger Worker (separate from verify-bot)
  *
  * Create a new Worker in Cloudflare, e.g. name: vault-ledger
