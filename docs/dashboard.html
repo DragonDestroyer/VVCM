@@ -94,10 +94,14 @@
   <main class="max-w-5xl mx-auto px-4 py-8">
 
     <!-- Three main tabs -->
-    <nav class="grid grid-cols-3 gap-3 mb-8">
+    <nav id="dash-tabs" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
       <button onclick="showPanel('account')" id="tab-account"
               class="tab-btn active py-4 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
         Account
+      </button>
+      <button onclick="showPanel('banking')" id="tab-banking"
+              class="tab-btn py-4 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
+        Account Management
       </button>
       <button onclick="showPanel('companies')" id="tab-companies"
               class="tab-btn py-4 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">
@@ -108,6 +112,40 @@
         Pay
       </button>
     </nav>
+
+    <div id="panel-banking" class="panel">
+      <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6 mb-6">
+        <h2 class="text-lg font-semibold">VAULT bank</h2>
+        <p class="text-sm text-white/45 mt-1">The only public company. Open a checking or savings account, or borrow from the bank. Interest and billing are set by VAULT officers.</p>
+        <div id="bank-rates" class="text-sm text-white/50 mt-4">Loading rates…</div>
+        <form id="bank-rate-form" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4" onsubmit="return saveBankRates(event)">
+          <label class="text-xs text-white/40">Checking APR %<input id="rate-checking" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
+          <label class="text-xs text-white/40">Savings APR %<input id="rate-savings" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
+          <label class="text-xs text-white/40">Loan APR %<input id="rate-loan" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
+          <label class="text-xs text-white/40">Billing days<input id="rate-days" type="number" min="1" max="365" step="1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
+          <button class="sm:col-span-4 bg-vv-green-500 text-vv-blue-950 font-semibold rounded-xl py-2.5">Save interest rates</button>
+        </form>
+      </section>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+          <h3 class="font-medium mb-3">Checking and savings</h3>
+          <div class="flex gap-2 mb-4">
+            <button type="button" onclick="openBankAccount('checking')" class="px-3 py-2 rounded-xl border border-white/10 text-sm">Open checking</button>
+            <button type="button" onclick="openBankAccount('savings')" class="px-3 py-2 rounded-xl border border-white/10 text-sm">Open savings</button>
+          </div>
+          <div id="bank-accounts" class="space-y-3 text-sm text-white/50">No accounts yet.</div>
+        </section>
+        <section class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-6">
+          <h3 class="font-medium mb-3">Bank loan</h3>
+          <form onsubmit="return takeBankLoan(event)" class="space-y-3">
+            <input id="loan-amount" type="number" min="1" step="0.01" placeholder="Amount" required class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm">
+            <input id="loan-purpose" type="text" minlength="4" placeholder="What the loan is for" required class="w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm">
+            <button class="bg-vv-green-500 text-vv-blue-950 font-semibold rounded-xl px-4 py-2.5">Borrow from VAULT</button>
+          </form>
+          <div id="bank-loans" class="space-y-3 text-sm text-white/50 mt-4">No loans.</div>
+        </section>
+      </div>
+    </div>
 
     <!-- ========== ACCOUNT PANEL ========== -->
     <div id="panel-account" class="panel active">
@@ -419,6 +457,84 @@
     let deptIdCounter = 0;
     let draggedJobEl = null;
 
+
+    function employedFrom(me) {
+      const gigs = (me && (me.gigs || me.companies)) || [];
+      return Array.isArray(gigs) && gigs.length > 0;
+    }
+    function applyEmploymentGate(employed) {
+      ['tab-account','tab-companies','tab-pay'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', !employed);
+      });
+      if (!employed) showPanel('banking');
+    }
+    async function loadBanking() {
+      const ratesRes = await VV_WORKER.get('/bank/rates');
+      const rates = (ratesRes.data && ratesRes.data.rates) || {};
+      const box = document.getElementById('bank-rates');
+      if (box) box.textContent = `Checking ${rates.checkingApr ?? '—'}% · Savings ${rates.savingsApr ?? '—'}% · Loans ${rates.loanApr ?? '—'}% · billed every ${rates.billingDays ?? '—'} days`;
+      const form = document.getElementById('bank-rate-form');
+      if (form && ratesRes.data && ratesRes.data.canEdit) {
+        form.classList.remove('hidden');
+        document.getElementById('rate-checking').value = rates.checkingApr ?? 0;
+        document.getElementById('rate-savings').value = rates.savingsApr ?? 0;
+        document.getElementById('rate-loan').value = rates.loanApr ?? 0;
+        document.getElementById('rate-days').value = rates.billingDays ?? 30;
+      }
+      const acc = await VV_WORKER.get('/bank/accounts');
+      const accounts = (acc.data && acc.data.items) || [];
+      const accBox = document.getElementById('bank-accounts');
+      if (accBox) {
+        accBox.innerHTML = accounts.length ? accounts.map(a => `<div class="border border-white/10 rounded-xl p-3">
+          <div class="flex justify-between"><span class="capitalize text-white/80">${a.type}</span><span class="font-mono text-vv-green-400">${(typeof moneyText === 'function' ? moneyText(a.balance) : a.balance)}</span></div>
+          <div class="text-xs text-white/35 mt-1">${a.apr}% APR</div>
+          <div class="flex gap-2 mt-2">
+            <button type="button" onclick="bankMove('${a.id}','deposit')" class="text-xs px-2 py-1 rounded-lg border border-white/10">Deposit</button>
+            <button type="button" onclick="bankMove('${a.id}','withdraw')" class="text-xs px-2 py-1 rounded-lg border border-white/10">Withdraw</button>
+          </div>
+        </div>`).join('') : 'No accounts yet.';
+      }
+      const loans = await VV_WORKER.get('/bank/loans');
+      const loanBox = document.getElementById('bank-loans');
+      const items = (loans.data && loans.data.items) || [];
+      if (loanBox) loanBox.innerHTML = items.length ? items.map(l => `<div class="border border-white/10 rounded-xl p-3"><div class="flex justify-between"><span>${l.purpose}</span><span class="font-mono">${l.balance}</span></div><div class="text-xs text-white/35">${l.apr}% APR · next bill ${l.nextBillAt ? l.nextBillAt.slice(0,10) : ''}</div></div>`).join('') : 'No loans.';
+    }
+    async function openBankAccount(type) {
+      const res = await VV_WORKER.post('/bank/accounts', { type });
+      if (!res.ok) alert(res.error || 'Could not open account');
+      await loadBanking();
+    }
+    async function bankMove(accountId, direction) {
+      const amount = Number(prompt(direction === 'deposit' ? 'Deposit amount' : 'Withdraw amount'));
+      if (!(amount > 0)) return;
+      const res = await VV_WORKER.post('/bank/accounts/transfer', { accountId, direction, amount });
+      if (!res.ok) alert(res.error || 'Transfer failed');
+      await loadBanking();
+    }
+    async function takeBankLoan(ev) {
+      ev.preventDefault();
+      const res = await VV_WORKER.post('/bank/loans', {
+        amount: Number(document.getElementById('loan-amount').value),
+        purpose: document.getElementById('loan-purpose').value.trim(),
+      });
+      if (!res.ok) alert(res.error || 'Loan failed');
+      else ev.target.reset();
+      await loadBanking();
+      return false;
+    }
+    async function saveBankRates(ev) {
+      ev.preventDefault();
+      const res = await VV_WORKER.post('/bank/rates', {
+        checkingApr: Number(document.getElementById('rate-checking').value),
+        savingsApr: Number(document.getElementById('rate-savings').value),
+        loanApr: Number(document.getElementById('rate-loan').value),
+        billingDays: Number(document.getElementById('rate-days').value),
+      });
+      if (!res.ok) alert(res.error || 'Could not save rates');
+      await loadBanking();
+      return false;
+    }
     function showPanel(name) {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1319,6 +1435,13 @@
         fillCoOwnerSelect();
       }
       try { await fillApplyCompanies(); } catch (e) { console.warn('apply companies', e); }
+      try {
+        const gigRes = await VV_WORKER.get('/me/gigs');
+        const employed = gigRes.ok && gigRes.data && Array.isArray(gigRes.data.items) && gigRes.data.items.length > 0;
+        applyEmploymentGate(employed);
+        await loadBanking();
+      } catch (e) { console.warn('banking', e); }
+
 
       try { await loadDashContracts(); }
       catch (e) {
