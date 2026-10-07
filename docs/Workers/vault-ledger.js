@@ -8,6 +8,7 @@
  * Secret DISCORD_BOT_TOKEN — same bot token as verify-bot (needed for live profile pictures)
  * Optional var:     CORS_ORIGIN = https://vvcm.pages.dev
  *
+ * Cron: 0 0 * * * (00:00 UTC) settles approved shift reports via scheduled().
  * Endpoints:
  *   GET  /me
  *   GET  /me/activity
