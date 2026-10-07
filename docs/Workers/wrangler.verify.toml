@@ -1,0 +1,7 @@
+name = "verify-bot"
+main = "verify-bot.js"
+compatibility_date = "2024-11-01"
+
+# Deploy command for the verify-bot Worker only:
+# npx wrangler deploy --config docs/Workers/wrangler.verify.toml
+# Do not use wrangler.ledger.toml here. That config deploys vault-ledger.
