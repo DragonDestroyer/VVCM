@@ -35,11 +35,11 @@
       background-color: #020617;
       background-image: linear-gradient(
         180deg,
-        #143a66 0%,
+        #020617 0%,
         #071427 42%,
-        #020617 50%,
+        #143a66 50%,
         #071427 58%,
-        #143a66 100%
+        #020617 100%
       );
       background-size: 100% 1600px;
       background-repeat: repeat-y;
@@ -941,11 +941,52 @@
       });
     }
 
+
+    async function loadOwnerReports() {
+      const box = document.getElementById('owner-reports');
+      const cid = (typeof COMPANY !== 'undefined' && COMPANY && COMPANY.id) || new URLSearchParams(location.search).get('id') || '';
+      if (!box || !cid) return;
+      const res = await VV_WORKER.get('/companies/' + encodeURIComponent(cid) + '/reports');
+      const items = (res.ok && res.data && res.data.items) || [];
+      if (!res.ok) {
+        box.innerHTML = '<div class="text-red-400">' + (res.error || 'Could not load reports') + '</div>';
+        return;
+      }
+      if (!items.length) {
+        box.innerHTML = '<div class="text-white/40">No shift reports yet.</div>';
+        return;
+      }
+      box.innerHTML = items.slice(0, 40).map(r => {
+        const canReject = r.status !== 'rejected';
+        const reason = String(r.rejectReason || '').replace(/</g, '');
+        const desc = String(r.description || '').replace(/</g, '');
+        return `<div class="border border-white/10 rounded-xl px-3 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="text-white/85">${r.displayName || r.username} · ${r.day} · ${r.hours}h @ ${moneyText(r.rate)}/h</div>
+            <div class="text-xs text-white/40 mt-1 break-words">${desc}</div>
+            <div class="text-xs mt-1 ${r.status === 'rejected' ? 'text-red-400' : 'text-white/35'}">${r.status}${r.paid ? ' · paid' : ' · unpaid'}${reason ? ' · ' + reason : ''}</div>
+          </div>
+          <div class="font-mono text-vv-green-400">${moneyText(r.amount)}</div>
+          ${canReject ? `<button type="button" class="text-xs px-3 py-2 rounded-lg border border-red-400/40 text-red-300 hover:bg-red-400/10" onclick="rejectShiftReport('${r.id}')">Reject</button>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    async function rejectShiftReport(id) {
+      const cid = (typeof COMPANY !== 'undefined' && COMPANY && COMPANY.id) || new URLSearchParams(location.search).get('id') || '';
+      const reason = prompt('Reason for rejection. Fraudulent hours are clawed back and can put the citizen in debt.');
+      if (!reason) return;
+      const res = await VV_WORKER.post('/reports/' + encodeURIComponent(id) + '/reject', { companyId: cid, reason });
+      if (!res.ok) alert(res.error || 'Could not reject report');
+      await loadOwnerReports();
+    }
+
     function showCoPanel(name) {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('panel-' + name).classList.add('active');
       document.getElementById('tab-' + name).classList.add('active');
+      if (name === 'pay') loadOwnerReports();
       // Chart.js needs a visible canvas to size correctly
       if (name === 'overview' && movementChart) {
         setTimeout(() => movementChart.resize(), 50);
