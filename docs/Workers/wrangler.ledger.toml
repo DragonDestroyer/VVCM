@@ -6,3 +6,7 @@ compatibility_date = "2024-11-01"
 # npx wrangler deploy --config docs/Workers/wrangler.ledger.toml
 [triggers]
 crons = ["0 0 * * *"]
+
+[[kv_namespaces]]
+binding = "AUTH"
+id = "1662b3d142fd4e7baabb1003e8886f71"
