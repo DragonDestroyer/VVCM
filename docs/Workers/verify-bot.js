@@ -155,9 +155,8 @@ async function saveCitizen(env, citizen) {
   const username = String(citizen.username || citizen.handle || "").toLowerCase();
   citizen.username = username;
   await env.AUTH.put(`citizen:${username}`, JSON.stringify(citizen));
-  if (citizen.uuid) {
-    await env.AUTH.put(`uuid:${citizen.uuid}`, username);
-  }
+  if (citizen.uuid) await env.AUTH.put(`uuid:${citizen.uuid}`, username);
+  if (citizen.discordId) await env.AUTH.put(`discord:${citizen.discordId}`, username);
 }
 
 /** Ensure uuid + balance; refresh Discord profile fields */
@@ -443,11 +442,11 @@ async function handleDiscordInteraction(request, env, ctx) {
     const name = interaction.data?.name || "";
     if (name === "syncmembers") {
       ctx.waitUntil(processSyncMembers(env, interaction));
-      return Response.json({
-        type: 5,
-        data: { flags: 64 },
-      });
+      return Response.json({ type: 5, data: { flags: 64 } });
     }
+    if (name === "pay") return slashPay(env, interaction);
+    if (name === "act") return slashAct(env, interaction);
+    if (name === "comp") return slashComp(env, interaction);
     return Response.json({ type: 4, data: { content: "Unknown command.", flags: 64 } });
   }
 
@@ -522,6 +521,65 @@ async function registerSlashCommands(env) {
       name: "syncmembers",
       description: "Scan this server and create VAULT accounts for everyone with the citizen role.",
       type: 1,
+    },
+    {
+      name: "pay",
+      description: "Pay another citizen from your personal vault.",
+      type: 1,
+      options: [
+        { name: "user", description: "Citizen to pay", type: 6, required: true },
+        { name: "amount", description: "Vidiadollars", type: 10, required: true },
+        { name: "note", description: "Optional note", type: 3, required: false },
+      ],
+    },
+    {
+      name: "act",
+      description: "Show the balance of one of your bank accounts.",
+      type: 1,
+      options: [
+        {
+          name: "type",
+          description: "Account type",
+          type: 3,
+          required: true,
+          choices: [
+            { name: "checking", value: "checking" },
+            { name: "savings", value: "savings" },
+            { name: "loan", value: "loan" },
+          ],
+        },
+      ],
+    },
+    {
+      name: "comp",
+      description: "Show or advertise a company.",
+      type: 1,
+      options: [
+        { name: "company", description: "Company name", type: 3, required: true },
+        {
+          name: "action",
+          description: "What to show",
+          type: 3,
+          required: true,
+          choices: [
+            { name: "showoff", value: "showoff" },
+            { name: "check", value: "check" },
+            { name: "report", value: "report" },
+            { name: "chart", value: "chart" },
+          ],
+        },
+        {
+          name: "style",
+          description: "Chart style, only used with chart",
+          type: 3,
+          required: false,
+          choices: [
+            { name: "pie", value: "pie" },
+            { name: "bar", value: "bar" },
+            { name: "stock", value: "stock" },
+          ],
+        },
+      ],
     },
   ];
   const path = guildId
@@ -654,4 +712,142 @@ async function syncGuildRoleToCitizens(env, guildId, roleId) {
     })
   );
   return { ok: true, matched: withRole.length, created, updated, totalDirectory: newDir.length };
+}
+
+function slashOpt(interaction, name) {
+  const opts = interaction.data?.options || [];
+  return opts.find((o) => o.name === name)?.value;
+}
+
+function ephemeral(content, extra = {}) {
+  return Response.json({ type: 4, data: { content, flags: 64, ...extra } });
+}
+
+function money(n) {
+  return "Ꝟ" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function citizenByDiscordId(env, discordId) {
+  const id = String(discordId || "");
+  if (!id) return null;
+  const linked = await env.AUTH.get(`discord:${id}`);
+  if (linked) return loadCitizen(env, linked);
+  const dir = (await env.AUTH.get("directory:citizens", "json")) || [];
+  const row = dir.find((c) => String(c.discordId || "") === id);
+  if (!row?.username) return null;
+  const citizen = await loadCitizen(env, row.username);
+  if (citizen?.username) await env.AUTH.put(`discord:${id}`, citizen.username);
+  return citizen;
+}
+
+async function findCompanyByName(env, name) {
+  const want = String(name || "").trim().toLowerCase().replace(/[™®©℠]/g, "").replace(/\s+/g, " ");
+  const dir = (await env.AUTH.get("directory:companies", "json")) || [];
+  const hit = dir.find((c) => String(c.name || "").trim().toLowerCase().replace(/[™®©℠]/g, "").replace(/\s+/g, " ") === want);
+  if (!hit) return null;
+  return (await env.AUTH.get(`company:${hit.id}`, "json")) || hit;
+}
+
+function companyRole(co, citizen) {
+  const uname = String(citizen?.username || "").toLowerCase();
+  if (!uname) return "";
+  if (String(co.owner || "").toLowerCase() === uname) return "owner";
+  const cos = (co.coOwners || []).map((x) => String(typeof x === "string" ? x : x.username || x.handle || "").toLowerCase());
+  if (cos.includes(uname)) return "co-owner";
+  if ((citizen.gigs || []).some((g) => g.companyId === co.id)) return "employee";
+  if ((citizen.companies || []).some((c) => c.id === co.id)) return "employee";
+  return "";
+}
+
+async function slashPay(env, interaction) {
+  const fromId = interaction.member?.user?.id || interaction.user?.id;
+  const toId = slashOpt(interaction, "user");
+  const amount = Math.round(Number(slashOpt(interaction, "amount")) * 100) / 100;
+  const note = String(slashOpt(interaction, "note") || "Discord pay").slice(0, 120);
+  if (!(amount > 0)) return ephemeral("Amount must be positive.");
+  if (String(fromId) === String(toId)) return ephemeral("You cannot pay yourself.");
+  const from = await citizenByDiscordId(env, fromId);
+  const to = await citizenByDiscordId(env, toId);
+  if (!from) return ephemeral("You do not have a VAULT citizen account.");
+  if (!to) return ephemeral("That person does not have a VAULT citizen account.");
+  if (Number(from.balance || 0) < amount) return ephemeral("Insufficient vault balance.");
+  from.balance = Math.round((Number(from.balance || 0) - amount) * 100) / 100;
+  to.balance = Math.round((Number(to.balance || 0) + amount) * 100) / 100;
+  await saveCitizen(env, from);
+  await saveCitizen(env, to);
+  await appendTx(env, from.uuid, { type: "transfer_out", label: `Paid ${to.displayName || to.username}`, amount: -amount, note, counterparty: to.uuid });
+  await appendTx(env, to.uuid, { type: "transfer_in", label: `Paid by ${from.displayName || from.username}`, amount, note, counterparty: from.uuid });
+  const receipt = `${from.displayName || from.username} paid ${to.displayName || to.username} ${money(amount)}${note ? ` · ${note}` : ""}`;
+  try { await discordDmText(env, to.discordId || toId, receipt); } catch (e) { console.error("pay dm", e); }
+  return ephemeral(receipt + "\nThe other citizen was sent the same receipt.");
+}
+
+async function slashAct(env, interaction) {
+  const userId = interaction.member?.user?.id || interaction.user?.id;
+  const type = String(slashOpt(interaction, "type") || "").toLowerCase();
+  const citizen = await citizenByDiscordId(env, userId);
+  if (!citizen) return ephemeral("You do not have a VAULT citizen account.");
+  if (type === "loan") {
+    const loans = (await env.AUTH.get(`bank:loans:${citizen.username}`, "json")) || [];
+    const open = loans.filter((l) => l.status !== "closed");
+    if (!open.length) return ephemeral("You have no open VAULT loan.");
+    const owed = open.reduce((s, l) => s + Number(l.balance || 0), 0);
+    return ephemeral(`Loan balance owed: ${money(owed)} across ${open.length} loan${open.length === 1 ? "" : "s"}.`);
+  }
+  const accounts = (await env.AUTH.get(`bank:accounts:${citizen.username}`, "json")) || [];
+  const account = accounts.find((a) => a.type === type && a.status !== "closed");
+  if (!account) return ephemeral(`You do not have an open ${type} account.`);
+  return ephemeral(`${type} balance: ${money(account.balance)} · ${account.apr}% APR`);
+}
+
+async function slashComp(env, interaction) {
+  const userId = interaction.member?.user?.id || interaction.user?.id;
+  const citizen = await citizenByDiscordId(env, userId);
+  if (!citizen) return ephemeral("You do not have a VAULT citizen account.");
+  const co = await findCompanyByName(env, slashOpt(interaction, "company"));
+  if (!co) return ephemeral("No company with that name.");
+  const action = String(slashOpt(interaction, "action") || "");
+  const role = companyRole(co, citizen);
+  if (!role) return ephemeral("You are not part of that company.");
+  if (action === "showoff") {
+    const content = `**${co.name}**\n${co.description || "Now open in VidiaVille."}\nStaff ${co.staff ?? "—"} · ask a member how to join.`;
+    return Response.json({ type: 4, data: { content } });
+  }
+  if (action === "check") {
+    if (role === "employee") return ephemeral("Only an owner or co-owner can check the company balance.");
+    return ephemeral(`${co.name} balance: ${money(co.balance)}`);
+  }
+  const txs = ((await env.AUTH.get(`ctx:${co.id}`, "json")) || []).slice(0, 8);
+  if (action === "report") {
+    const last = txs.slice(0, 5);
+    if (!last.length) return ephemeral(`${co.name} has no recorded transactions.`);
+    const lines = last.map((t) => `• ${t.label || t.type || "Transaction"} ${money(t.amount)}`).join("\n");
+    return ephemeral(`Last transactions for ${co.name}:\n${lines}`);
+  }
+  if (action === "chart") {
+    const style = String(slashOpt(interaction, "style") || "bar");
+    if (!txs.length) return ephemeral(`${co.name} has no transactions to chart.`);
+    const labels = txs.slice().reverse().map((t, i) => t.label ? String(t.label).slice(0, 18) : String(i + 1));
+    const values = txs.slice().reverse().map((t) => Number(t.amount) || 0);
+    let chart;
+    if (style === "pie") {
+      const inn = values.filter((n) => n > 0).reduce((s, n) => s + n, 0);
+      const out = values.filter((n) => n < 0).reduce((s, n) => s + Math.abs(n), 0);
+      chart = { type: "pie", data: { labels: ["In", "Out"], datasets: [{ data: [inn, out] }] } };
+    } else if (style === "stock") {
+      let run = Number(co.balance || 0);
+      const series = [];
+      for (const t of txs) {
+        series.push(run);
+        run -= Number(t.amount) || 0;
+      }
+      series.reverse();
+      chart = { type: "line", data: { labels: series.map((_, i) => String(i + 1)), datasets: [{ label: co.name, data: series, fill: false }] } };
+    } else {
+      chart = { type: "bar", data: { labels, datasets: [{ label: co.name, data: values }] } };
+    }
+    const url = "https://quickchart.io/chart?w=600&h=320&c=" + encodeURIComponent(JSON.stringify(chart));
+    return ephemeral(`${co.name} ${style} chart`, { embeds: [{ title: `${co.name} · ${style}`, image: { url } }] });
+  }
+  return ephemeral("Unknown company action.");
 }
