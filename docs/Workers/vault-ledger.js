@@ -8,7 +8,6 @@
  * Secret DISCORD_BOT_TOKEN — same bot token as verify-bot (needed for live profile pictures)
  * Optional var:     CORS_ORIGIN = https://vvcm.pages.dev
  *
- * Cron: 0 0 * * * (00:00 UTC) settles approved shift reports via scheduled().
  * Endpoints:
  *   GET  /me
  *   GET  /me/activity
@@ -152,6 +151,27 @@ export default {
       }
       if (url.pathname === "/payroll/run" && request.method === "POST") {
         return cors(env, await runPayrollNow(request, env));
+      }
+      if (url.pathname === "/bank/rates" && request.method === "GET") {
+        return cors(env, await bankRates(request, env));
+      }
+      if (url.pathname === "/bank/rates" && request.method === "POST") {
+        return cors(env, await setBankRates(request, env));
+      }
+      if (url.pathname === "/bank/accounts" && request.method === "GET") {
+        return cors(env, await bankAccounts(request, env));
+      }
+      if (url.pathname === "/bank/accounts" && request.method === "POST") {
+        return cors(env, await openBankAccount(request, env));
+      }
+      if (url.pathname === "/bank/accounts/transfer" && request.method === "POST") {
+        return cors(env, await bankTransfer(request, env));
+      }
+      if (url.pathname === "/bank/loans" && request.method === "GET") {
+        return cors(env, await bankLoans(request, env));
+      }
+      if (url.pathname === "/bank/loans" && request.method === "POST") {
+        return cors(env, await openBankLoan(request, env));
       }
       return cors(env, json({ ok: true, service: "vault-ledger" }));
     } catch (e) {
@@ -700,15 +720,21 @@ async function meCompanies(request, env) {
   return json({ items });
 }
 
+function isVaultCompany(co) {
+  const name = normCompanyName(co?.name).replace(/[™®©℠]/g, "").trim();
+  return name === "vault" || name.startsWith("vault ");
+}
+
 async function listCompaniesPublic(env) {
   const dir = (await env.AUTH.get("directory:companies", "json")) || [];
   return json({
-    items: dir.map((c) => ({
+    items: dir.filter(isVaultCompany).map((c) => ({
       id: c.id,
       name: c.name,
       owner: c.owner,
       status: c.status || "Active",
       staff: c.staff ?? 0,
+      public: true,
     })),
   });
 }
@@ -728,7 +754,7 @@ async function getCompany(request, env, id) {
   const admin = await isAdminUser(env, uname);
   const isOwner = String(co.owner || "").toLowerCase() === uname;
   const isCo = isCoOwnerOf(co, uname);
-  if (!admin && !isOwner && !isCo) {
+  if (!admin && !isOwner && !isCo && !isVaultCompany(co)) {
     const citizen = await loadCitizen(env, uname);
     const linked = (citizen?.companies || []).some((c) => c.id === id) ||
       (citizen?.gigs || []).some((g) => g.companyId === id);
@@ -745,8 +771,8 @@ async function getCompany(request, env, id) {
     departments: co.departments || [],
     coOwners: co.coOwners || [],
     createdAt: co.createdAt || null,
-    role: admin || isOwner || isCo ? "owner" : "member",
-    viewingAsAdmin: admin && !isOwner,
+    role: isOwner ? "owner" : (coOwnerNames(co).includes(uname) ? "co-owner" : (admin ? "admin" : "member")),
+    viewingAsAdmin: admin && !isOwner && !coOwnerNames(co).includes(uname),
     logo: co.logo || "",
   });
 }
@@ -1586,4 +1612,161 @@ async function runPayrollNow(request, env) {
   if (!(await isAdminUser(env, uname))) return json({ error: "Forbidden" }, 403);
   const result = await settleShiftPayroll(env);
   return json({ ok: true, ...result });
+}
+
+
+const BANK_RATE_DEFAULTS = { checkingApr: 0.5, savingsApr: 2, loanApr: 8, billingDays: 30 };
+
+async function bankRateTable(env) {
+  const stored = (await env.AUTH.get("bank:rates", "json")) || {};
+  return {
+    checkingApr: Number(stored.checkingApr ?? BANK_RATE_DEFAULTS.checkingApr),
+    savingsApr: Number(stored.savingsApr ?? BANK_RATE_DEFAULTS.savingsApr),
+    loanApr: Number(stored.loanApr ?? BANK_RATE_DEFAULTS.loanApr),
+    billingDays: Math.max(1, Number(stored.billingDays ?? BANK_RATE_DEFAULTS.billingDays) || 30),
+  };
+}
+
+async function bankRates(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  return json({ rates: await bankRateTable(env), canEdit: await isAdminUser(env, uname) });
+}
+
+async function setBankRates(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  if (!(await isAdminUser(env, uname))) return json({ error: "Forbidden" }, 403);
+  const body = await request.json().catch(() => ({}));
+  const current = await bankRateTable(env);
+  const next = {
+    checkingApr: Number(body.checkingApr ?? current.checkingApr),
+    savingsApr: Number(body.savingsApr ?? current.savingsApr),
+    loanApr: Number(body.loanApr ?? current.loanApr),
+    billingDays: Math.max(1, Number(body.billingDays ?? current.billingDays) || 30),
+  };
+  for (const k of ["checkingApr", "savingsApr", "loanApr"]) {
+    if (!Number.isFinite(next[k]) || next[k] < 0 || next[k] > 100) {
+      return json({ error: "Rates must be between 0 and 100 percent" }, 400);
+    }
+  }
+  next.updatedAt = new Date().toISOString();
+  next.updatedBy = uname;
+  await env.AUTH.put("bank:rates", JSON.stringify(next));
+  return json({ ok: true, rates: next });
+}
+
+async function bankAccounts(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const items = (await env.AUTH.get(`bank:accounts:${uname}`, "json")) || [];
+  return json({ items, rates: await bankRateTable(env) });
+}
+
+async function openBankAccount(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const body = await request.json().catch(() => ({}));
+  const type = String(body.type || "").toLowerCase();
+  if (type !== "checking" && type !== "savings") return json({ error: "type must be checking or savings" }, 400);
+  const items = (await env.AUTH.get(`bank:accounts:${uname}`, "json")) || [];
+  if (items.some((a) => a.type === type && a.status !== "closed")) {
+    return json({ error: `You already have a ${type} account` }, 409);
+  }
+  const rates = await bankRateTable(env);
+  const account = {
+    id: crypto.randomUUID(),
+    type,
+    balance: 0,
+    apr: type === "savings" ? rates.savingsApr : rates.checkingApr,
+    billingDays: rates.billingDays,
+    status: "open",
+    openedAt: new Date().toISOString(),
+  };
+  items.unshift(account);
+  await env.AUTH.put(`bank:accounts:${uname}`, JSON.stringify(items));
+  return json({ ok: true, account });
+}
+
+async function bankTransfer(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const citizen = await loadCitizen(env, uname);
+  if (!citizen) return json({ error: "Citizen not found" }, 404);
+  const body = await request.json().catch(() => ({}));
+  const amount = Math.round(Number(body.amount) * 100) / 100;
+  const direction = String(body.direction || "deposit").toLowerCase();
+  if (!(amount > 0)) return json({ error: "Amount must be positive" }, 400);
+  const items = (await env.AUTH.get(`bank:accounts:${uname}`, "json")) || [];
+  const account = items.find((a) => a.id === body.accountId);
+  if (!account || account.status === "closed") return json({ error: "Account not found" }, 404);
+  if (typeof citizen.balance !== "number") citizen.balance = 0;
+  if (direction === "deposit") {
+    if (citizen.balance < amount) return json({ error: "Insufficient vault balance" }, 400);
+    citizen.balance = Math.round((citizen.balance - amount) * 100) / 100;
+    account.balance = Math.round((Number(account.balance || 0) + amount) * 100) / 100;
+  } else if (direction === "withdraw") {
+    if (Number(account.balance || 0) < amount) return json({ error: "Insufficient account balance" }, 400);
+    account.balance = Math.round((Number(account.balance || 0) - amount) * 100) / 100;
+    citizen.balance = Math.round((citizen.balance + amount) * 100) / 100;
+  } else return json({ error: "direction must be deposit or withdraw" }, 400);
+  await saveCitizen(env, citizen);
+  await env.AUTH.put(`bank:accounts:${uname}`, JSON.stringify(items));
+  return json({ ok: true, account, vaultBalance: citizen.balance });
+}
+
+async function bankLoans(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const items = (await env.AUTH.get(`bank:loans:${uname}`, "json")) || [];
+  return json({ items, rates: await bankRateTable(env) });
+}
+
+async function openBankLoan(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const citizen = await loadCitizen(env, uname);
+  if (!citizen) return json({ error: "Citizen not found" }, 404);
+  const body = await request.json().catch(() => ({}));
+  const amount = Math.round(Number(body.amount) * 100) / 100;
+  const purpose = String(body.purpose || "").trim().slice(0, 180);
+  if (!(amount > 0) || amount > 1000000) return json({ error: "Loan amount must be between 1 and 1,000,000" }, 400);
+  if (purpose.length < 4) return json({ error: "Add a short purpose" }, 400);
+  const rates = await bankRateTable(env);
+  const now = new Date();
+  const next = new Date(now.getTime() + rates.billingDays * 86400000);
+  const loan = {
+    id: crypto.randomUUID(),
+    principal: amount,
+    balance: amount,
+    apr: rates.loanApr,
+    billingDays: rates.billingDays,
+    purpose,
+    status: "open",
+    openedAt: now.toISOString(),
+    nextBillAt: next.toISOString(),
+    lender: "VAULT",
+  };
+  if (typeof citizen.balance !== "number") citizen.balance = 0;
+  citizen.balance = Math.round((citizen.balance + amount) * 100) / 100;
+  await saveCitizen(env, citizen);
+  if (citizen.uuid) {
+    await appendTx(env, citizen.uuid, {
+      type: "loan",
+      label: "VAULT bank loan",
+      amount,
+      note: `${rates.loanApr}% APR · billed every ${rates.billingDays} days`,
+    });
+  }
+  const items = (await env.AUTH.get(`bank:loans:${uname}`, "json")) || [];
+  items.unshift(loan);
+  await env.AUTH.put(`bank:loans:${uname}`, JSON.stringify(items));
+  return json({ ok: true, loan, vaultBalance: citizen.balance });
 }
