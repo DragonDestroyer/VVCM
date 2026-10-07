@@ -1,0 +1,8 @@
+name = "vault-ledger"
+main = "vault-ledger.js"
+compatibility_date = "2024-11-01"
+
+# Payday. Cloudflare cron is UTC. Requires the deploy command:
+# npx wrangler deploy --config docs/Workers/wrangler.ledger.toml
+[triggers]
+crons = ["0 0 * * *"]
