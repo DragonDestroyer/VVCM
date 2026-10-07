@@ -20,6 +20,10 @@
  */
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(settleShiftPayroll(env).catch((e) => console.error("payroll", e)));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
 
@@ -92,6 +96,10 @@ export default {
           const id = rest.slice(0, -"/jobs".length);
           return cors(env, await listCompanyJobs(request, env, id));
         }
+        if (rest.endsWith("/reports")) {
+          const id = rest.slice(0, -"/reports".length);
+          return cors(env, await listCompanyReports(request, env, id));
+        }
         return cors(env, await getCompany(request, env, rest));
       }
       if (url.pathname.startsWith("/companies/") && url.pathname.endsWith("/ledger") && request.method === "POST") {
@@ -126,6 +134,23 @@ export default {
       if (url.pathname.startsWith("/companies/") && url.pathname.endsWith("/jobs") && request.method === "GET") {
         const id = url.pathname.slice("/companies/".length, -"/jobs".length);
         return cors(env, await listCompanyJobs(request, env, id));
+      }
+      if (url.pathname === "/reports" && request.method === "POST") {
+        return cors(env, await submitShiftReport(request, env));
+      }
+      if (url.pathname === "/reports/mine" && request.method === "GET") {
+        return cors(env, await myShiftReports(request, env));
+      }
+      if (url.pathname.startsWith("/companies/") && url.pathname.endsWith("/reports") && request.method === "GET") {
+        const id = url.pathname.slice("/companies/".length, -"/reports".length);
+        return cors(env, await listCompanyReports(request, env, id));
+      }
+      if (url.pathname.startsWith("/reports/") && url.pathname.endsWith("/reject") && request.method === "POST") {
+        const id = url.pathname.slice("/reports/".length, -"/reject".length);
+        return cors(env, await rejectShiftReport(request, env, id));
+      }
+      if (url.pathname === "/payroll/run" && request.method === "POST") {
+        return cors(env, await runPayrollNow(request, env));
       }
       return cors(env, json({ ok: true, service: "vault-ledger" }));
     } catch (e) {
@@ -1331,4 +1356,233 @@ async function updateCompanyStructure(request, env, id) {
   if (body.logo === "") delete co.logo;
   await saveCompanyRecord(env, co);
   return json({ ok: true, company: { id: co.id, departments: co.departments, logo: co.logo || "" } });
+}
+
+function utcDay(date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function reportsKey(companyId) {
+  return `shift-reports:${companyId}`;
+}
+
+async function loadReports(env, companyId) {
+  return (await env.AUTH.get(reportsKey(companyId), "json")) || [];
+}
+
+async function saveReports(env, companyId, items) {
+  await env.AUTH.put(reportsKey(companyId), JSON.stringify(items.slice(0, 400)));
+}
+
+function memberRate(citizen, co, uname) {
+  const gig =
+    (citizen?.gigs || []).find((g) => g.companyId === co.id) ||
+    (citizen?.companies || []).find((c) => c.id === co.id) ||
+    null;
+  let rate = Number(gig?.salary ?? gig?.rate ?? 0);
+  if (!(rate > 0) && Array.isArray(co.departments)) {
+    for (const d of co.departments) {
+      for (const m of d.members || []) {
+        if (String(m.username || m.handle || "").toLowerCase() === uname) {
+          rate = Number(m.salary ?? m.rate ?? 0);
+        }
+      }
+    }
+  }
+  return { gig, rate };
+}
+
+async function submitShiftReport(request, env) {
+  await settleShiftPayroll(env);
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const citizen = await loadCitizen(env, uname);
+  if (!citizen) return json({ error: "Citizen not found" }, 404);
+  const body = await request.json().catch(() => ({}));
+  const companyId = String(body.companyId || "").trim();
+  const hours = Math.round(Number(body.hours) * 100) / 100;
+  const description = String(body.description || "").trim().slice(0, 280);
+  if (!companyId) return json({ error: "companyId required" }, 400);
+  if (!(hours > 0) || hours > 24) return json({ error: "Hours must be between 0.25 and 24" }, 400);
+  if (description.length < 8) return json({ error: "Add a short description (at least 8 characters)" }, 400);
+  const co = await loadCompanyRecord(env, companyId);
+  if (!co) return json({ error: "Company not found" }, 404);
+  const isOwner = String(co.owner || "").toLowerCase() === uname;
+  const { gig, rate } = memberRate(citizen, co, uname);
+  if (!gig && !isOwner) return json({ error: "You are not a member of this company" }, 403);
+  if (!(rate > 0)) return json({ error: "No hourly rate is set for you at this company" }, 400);
+  const day = utcDay();
+  const amount = Math.round(hours * rate * 100) / 100;
+  const items = await loadReports(env, co.id);
+  const existing = items.find((r) => r.username === uname && r.day === day && r.status !== "rejected");
+  if (existing && existing.paid) {
+    return json({ error: "Today's UTC shift is already paid. Submit again after 00:00 UTC." }, 409);
+  }
+  const report = {
+    id: existing?.id || crypto.randomUUID(),
+    companyId: co.id,
+    companyName: co.name,
+    username: uname,
+    displayName: citizen.displayName || citizen.username,
+    hours,
+    description,
+    rate,
+    amount,
+    day,
+    timezone: "UTC",
+    status: "approved",
+    paid: false,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const next = existing ? items.map((r) => (r.id === report.id ? report : r)) : [report, ...items];
+  await saveReports(env, co.id, next);
+  return json({ ok: true, report, payday: "00:00 UTC" });
+}
+
+async function myShiftReports(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const citizen = await loadCitizen(env, uname);
+  const ids = new Set();
+  for (const g of citizen?.gigs || []) if (g.companyId) ids.add(g.companyId);
+  for (const c of citizen?.companies || []) if (c.id) ids.add(c.id);
+  const items = [];
+  for (const id of ids) {
+    const list = await loadReports(env, id);
+    items.push(...list.filter((r) => r.username === uname));
+  }
+  items.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return json({ items });
+}
+
+async function listCompanyReports(request, env, companyId) {
+  await settleShiftPayroll(env);
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const co = await loadCompanyRecord(env, decodeURIComponent(companyId));
+  if (!co) return json({ error: "Company not found" }, 404);
+  const gate = await assertCompanyAccess(env, co, uname, { ownerOnly: true });
+  const citizen = await loadCitizen(env, uname);
+  const member = (citizen?.gigs || []).some((g) => g.companyId === co.id) || (citizen?.companies || []).some((c) => c.id === co.id);
+  if (gate.error && !member) return gate.error;
+  let items = await loadReports(env, co.id);
+  if (gate.error) items = items.filter((r) => r.username === uname);
+  return json({ items, payday: "00:00 UTC" });
+}
+
+async function rejectShiftReport(request, env, reportId) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const body = await request.json().catch(() => ({}));
+  const reason = String(body.reason || "").trim().slice(0, 240);
+  if (reason.length < 3) return json({ error: "A rejection reason is required" }, 400);
+  const companyId = String(body.companyId || "").trim();
+  const co = await loadCompanyRecord(env, companyId);
+  if (!co) return json({ error: "Company not found" }, 404);
+  const gate = await assertCompanyAccess(env, co, uname, { ownerOnly: true });
+  if (gate.error) return gate.error;
+  const items = await loadReports(env, co.id);
+  const report = items.find((r) => r.id === decodeURIComponent(reportId));
+  if (!report) return json({ error: "Report not found" }, 404);
+  if (report.status === "rejected") return json({ ok: true, report, already: true });
+  let debt = false;
+  if (report.paid && report.amount > 0) {
+    const citizen = await loadCitizen(env, report.username);
+    if (!citizen) return json({ error: "Citizen not found" }, 404);
+    if (typeof citizen.balance !== "number") citizen.balance = 0;
+    citizen.balance = Math.round((Number(citizen.balance) - Number(report.amount)) * 100) / 100;
+    debt = citizen.balance < 0;
+    co.balance = Math.round((Number(co.balance || 0) + Number(report.amount)) * 100) / 100;
+    await saveCitizen(env, citizen);
+    await saveCompanyRecord(env, co);
+    await appendTx(env, citizen.uuid, {
+      type: "fraud_clawback",
+      label: `Fraudulent hours clawed back · ${co.name}`,
+      amount: -Number(report.amount),
+      note: reason,
+      counterparty: co.id,
+    });
+    await appendCompanyTx(env, co.id, {
+      type: "clawback",
+      label: `Rejected shift · ${citizen.displayName || citizen.username}`,
+      amount: Number(report.amount),
+      by: uname,
+      counterparty: citizen.username,
+    });
+    report.clawedBack = true;
+    report.balanceAfter = citizen.balance;
+  }
+  report.status = "rejected";
+  report.rejectReason = reason;
+  report.rejectedBy = uname;
+  report.rejectedAt = new Date().toISOString();
+  await saveReports(env, co.id, items);
+  return json({ ok: true, report, debt });
+}
+
+async function settleShiftPayroll(env) {
+  const today = utcDay();
+  const dir = (await env.AUTH.get("directory:companies", "json")) || [];
+  const paid = [];
+  for (const row of dir) {
+    const co = await loadCompanyRecord(env, row.id);
+    if (!co) continue;
+    const items = await loadReports(env, co.id);
+    let dirty = false;
+    let companyDirty = false;
+    for (const report of items) {
+      if (report.status !== "approved" || report.paid) continue;
+      if (!report.day || report.day >= today) continue;
+      const amount = Number(report.amount) || 0;
+      if (!(amount > 0)) continue;
+      const citizen = await loadCitizen(env, report.username);
+      if (!citizen) continue;
+      if (!citizen.uuid) citizen.uuid = crypto.randomUUID();
+      if (typeof citizen.balance !== "number") citizen.balance = 0;
+      citizen.balance = Math.round((Number(citizen.balance) + amount) * 100) / 100;
+      co.balance = Math.round((Number(co.balance || 0) - amount) * 100) / 100;
+      report.paid = true;
+      report.paidAt = new Date().toISOString();
+      dirty = true;
+      companyDirty = true;
+      await saveCitizen(env, citizen);
+      await appendTx(env, citizen.uuid, {
+        type: "shift_pay",
+        label: `Shift pay · ${co.name} · ${report.day}`,
+        amount,
+        note: `${report.hours}h @ ${report.rate}/h`,
+        counterparty: co.id,
+      });
+      await appendCompanyTx(env, co.id, {
+        type: "salary",
+        label: `UTC payday · ${citizen.displayName || citizen.username} · ${report.day}`,
+        amount: -amount,
+        by: "payroll",
+        counterparty: citizen.username,
+      });
+      paid.push({ id: report.id, username: report.username, amount, companyId: co.id });
+    }
+    if (dirty) await saveReports(env, co.id, items);
+    if (companyDirty) await saveCompanyRecord(env, co);
+  }
+  await env.AUTH.put("payroll:last", JSON.stringify({ at: new Date().toISOString(), day: today, count: paid.length }));
+  return { day: today, count: paid.length, paid };
+}
+
+async function runPayrollNow(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  if (!(await isAdminUser(env, uname))) return json({ error: "Forbidden" }, 403);
+  const result = await settleShiftPayroll(env);
+  return json({ ok: true, ...result });
 }
