@@ -5,3 +5,7 @@ compatibility_date = "2024-11-01"
 # Deploy command for the verify-bot Worker only:
 # npx wrangler deploy --config docs/Workers/wrangler.verify.toml
 # Do not use wrangler.ledger.toml here. That config deploys vault-ledger.
+
+[[kv_namespaces]]
+binding = "AUTH"
+id = "1662b3d142fd4e7baabb1003e8886f71"
