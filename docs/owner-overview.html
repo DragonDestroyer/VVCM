@@ -1846,9 +1846,10 @@
       }
       const roleBadge = document.getElementById('company-role-badge');
       if (roleBadge) {
-        roleBadge.textContent = COMPANY.viewingAsAdmin
-          ? 'Admin view'
-          : (COMPANY.role === 'owner' || COMPANY.role === 'Owner' ? 'Owner' : (COMPANY.role || 'Member'));
+        const role = String(COMPANY.role || '').toLowerCase();
+        roleBadge.textContent = role === 'co-owner'
+          ? 'Co-owner'
+          : (role === 'owner' ? 'Owner' : (COMPANY.viewingAsAdmin ? 'Admin view' : (COMPANY.role || 'Member')));
       }
 
       // Replace leftover template strings in page copy
