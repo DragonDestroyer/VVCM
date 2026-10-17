@@ -97,6 +97,7 @@
       <button type="button" onclick="showAdminPanel('citizens')" id="tab-citizens" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Citizens</button>
       <button type="button" onclick="showAdminPanel('companies')" id="tab-companies" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Companies</button>
       <button type="button" onclick="showAdminPanel('applications')" id="tab-applications" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Applications</button>
+      <button type="button" onclick="showAdminPanel('government')" id="tab-government" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Government</button>
       <button type="button" onclick="showAdminPanel('contracts')" id="tab-contracts" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Contracts</button>
       <button type="button" onclick="showAdminPanel('reports')" id="tab-reports" class="tab-btn py-3 rounded-xl border border-white/10 bg-vv-blue-900/40 text-sm font-medium transition hover:border-vv-green-500/40">Tax periods</button>
     </nav>
@@ -280,6 +281,12 @@
     </div>
 
     <!-- ========== APPLICATIONS ========== -->
+    <div id="panel-government" class="panel space-y-4">
+      <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Government funding requests</h2>
+      <p class="text-sm text-white/40">Accepting a request credits the company from the government. The government is an infinite source for now.</p>
+      <div id="gov-requests" class="space-y-3"></div>
+    </div>
+
     <div id="panel-applications" class="panel space-y-4">
       <h2 class="text-sm font-medium text-white/50 uppercase tracking-wider">Company applications</h2>
       <p class="text-sm text-white/40">Approve to register the company and sanction starting capital.</p>
@@ -696,6 +703,36 @@
       `).join('');
     }
 
+
+    async function renderGovRequests() {
+      const box = document.getElementById('gov-requests');
+      if (!box || !window.VV_ADMIN_URL) return;
+      const res = await VV_WORKER.adminGet('/admin/gov-requests');
+      const items = (res.ok && res.data && res.data.items) || [];
+      if (!items.length) { box.innerHTML = '<p class="text-sm text-white/40">No requests yet.</p>'; return; }
+      box.innerHTML = items.map(r => `
+        <div class="bg-vv-blue-900/60 border border-white/10 rounded-2xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium">${r.companyName || r.companyId}</div>
+              <div class="text-xs text-white/40">${r.owner || ''} · ${r.createdAt || ''}</div>
+            </div>
+            <div class="font-mono text-vv-green-400">V${Number(r.amount || 0).toFixed(2)}</div>
+          </div>
+          <p class="text-sm text-white/70 mt-2">${r.reason || ''}</p>
+          <div class="mt-3 flex items-center gap-2">
+            <span class="text-xs uppercase tracking-wider text-white/40">${r.status}</span>
+            ${r.status === 'pending' ? `<button type="button" class="text-xs bg-vv-green-500 text-vv-blue-950 px-3 py-1.5 rounded-lg" onclick="decideGovRequest('${r.id}', true)">Accept</button>
+            <button type="button" class="text-xs border border-white/15 px-3 py-1.5 rounded-lg" onclick="decideGovRequest('${r.id}', false)">Reject</button>` : ''}
+          </div>
+        </div>`).join('');
+    }
+    async function decideGovRequest(id, approve) {
+      const res = await VV_WORKER.adminPost('/admin/gov-request/decide', { id, approve });
+      if (!res.ok) { alert(res.error || res.data?.error || 'Could not decide'); return; }
+      await renderGovRequests();
+    }
+
     function renderApplications() {
       const list = document.getElementById('applications-list');
       if (!APPLICATIONS.length) {
@@ -903,6 +940,7 @@
       renderCitizens();
       renderCompanies();
       renderApplications();
+      renderGovRequests();
       renderContracts();
       renderReports();
     }
