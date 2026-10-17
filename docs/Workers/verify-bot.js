@@ -890,12 +890,36 @@ function criminalRoleId(env) {
   return String(env.DISCORD_CRIMINAL_ROLE_ID || "1459596363120509111").trim();
 }
 
-async function interactionEdit(interaction, content) {
-  await fetch(`https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`, {
+async function interactionEdit(env, interaction, content) {
+  const base = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}`;
+  const patched = await fetch(base + "/messages/@original", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content }),
   });
+  if (patched.ok) return;
+  const followed = await fetch(base, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content, flags: 64 }),
+  });
+  if (!followed.ok && interaction.channel_id) {
+    await discordApi(env, `/channels/${interaction.channel_id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+  }
+}
+
+function discordError(e) {
+  const msg = String(e?.message || e || "unknown error");
+  if (msg.includes("50013") || msg.includes("Missing Permissions")) {
+    return "Discord refused the role change. Give the bot Manage Roles and move its role above the person you are jailing.";
+  }
+  if (msg.includes("403") || msg.includes("Missing Access")) {
+    return "Discord blocked the member lookup. Enable Server Members Intent on the bot, then try again.";
+  }
+  return "Jail command failed: " + msg;
 }
 
 function isVaultAdminMember(interaction) {
@@ -940,27 +964,29 @@ async function nextPrisonNumber(env) {
 
 async function processJailCommand(env, interaction, name) {
   try {
+    await interactionEdit(env, interaction, "Working…");
     if (!isVaultAdminMember(interaction)) {
-      return interactionEdit(interaction, "Only the vault admin role can use this.");
+      return interactionEdit(env, interaction, "Only the vault admin role can use this.");
     }
     const guildId = String(interaction.guild_id || env.DISCORD_GUILD_ID || "").trim();
-    if (!guildId) return interactionEdit(interaction, "This command must be used in the server.");
+    if (!guildId) return interactionEdit(env, interaction, "This command must be used in the server.");
     const userId = String(slashOpt(interaction, "user") || "");
     const citizen = await citizenByDiscordId(env, userId);
-    if (!citizen?.uuid) return interactionEdit(interaction, "That person needs a VAULT citizen account first.");
+    if (!citizen?.uuid) return interactionEdit(env, interaction, "That person needs a VAULT citizen account first.");
     if (name === "jail") return jailCitizen(env, interaction, guildId, userId, citizen);
     if (name === "unjail") return unjailCitizen(env, interaction, guildId, userId, citizen);
     return scrubCitizen(env, interaction, guildId, userId, citizen);
   } catch (e) {
     console.error(e);
-    return interactionEdit(interaction, "Jail command failed: " + (e.message || "unknown error"));
+    return interactionEdit(env, interaction, discordError(e));
   }
 }
 
 async function jailCitizen(env, interaction, guildId, userId, citizen) {
   const existing = await env.AUTH.get(`jail:${citizen.uuid}`, "json");
-  if (existing && !existing.releasedAt) return interactionEdit(interaction, "That citizen is already jailed.");
-  const member = await guildMember(env, guildId, userId);
+  if (existing && !existing.releasedAt) return interactionEdit(env, interaction, "That citizen is already jailed.");
+  const resolved = interaction.data?.resolved?.members?.[userId];
+  const member = resolved?.roles ? { roles: resolved.roles } : await guildMember(env, guildId, userId);
   const kept = new Set([JAILED_ROLE_ID]);
   const criminal = criminalRoleId(env);
   if (criminal) kept.add(criminal);
@@ -980,12 +1006,12 @@ async function jailCitizen(env, interaction, guildId, userId, citizen) {
     jailedAt: new Date().toISOString(),
     jailedBy: String(interaction.member?.user?.id || interaction.user?.id || ""),
   }));
-  return interactionEdit(interaction, `Jailed. Inmate ${String(number).padStart(3, "0")} is stored under VAULT uuid ${citizen.uuid}.`);
+  return interactionEdit(env, interaction, `Jailed. Inmate ${String(number).padStart(3, "0")} is stored under VAULT uuid ${citizen.uuid}.`);
 }
 
 async function unjailCitizen(env, interaction, guildId, userId, citizen) {
   const record = await env.AUTH.get(`jail:${citizen.uuid}`, "json");
-  if (!record || record.releasedAt) return interactionEdit(interaction, "No open jail record for that citizen.");
+  if (!record || record.releasedAt) return interactionEdit(env, interaction, "No open jail record for that citizen.");
   const scrub = slashOpt(interaction, "scrub") === true;
   const criminal = criminalRoleId(env);
   const restore = (record.roles || []).filter((id) => id !== JAILED_ROLE_ID && id !== record.prisonRoleId && (scrub || id !== criminal));
@@ -997,12 +1023,12 @@ async function unjailCitizen(env, interaction, guildId, userId, citizen) {
   record.releasedAt = new Date().toISOString();
   record.scrubbed = scrub;
   await env.AUTH.put(`jail:${citizen.uuid}`, JSON.stringify(record));
-  return interactionEdit(interaction, scrub ? "Released and record scrubbed." : "Released. Criminal role remains until /scrub.");
+  return interactionEdit(env, interaction, scrub ? "Released and record scrubbed." : "Released. Criminal role remains until /scrub.");
 }
 
 async function scrubCitizen(env, interaction, guildId, userId, citizen) {
   const criminal = criminalRoleId(env);
-  if (!criminal) return interactionEdit(interaction, "Set DISCORD_CRIMINAL_ROLE_ID on the worker first.");
+  if (!criminal) return interactionEdit(env, interaction, "Set DISCORD_CRIMINAL_ROLE_ID on the worker first.");
   const member = await guildMember(env, guildId, userId);
   const roles = (member.roles || []).map(String).filter((id) => id !== criminal);
   await setMemberRoles(env, guildId, userId, roles);
@@ -1012,5 +1038,5 @@ async function scrubCitizen(env, interaction, guildId, userId, citizen) {
     record.scrubbedAt = new Date().toISOString();
     await env.AUTH.put(`jail:${citizen.uuid}`, JSON.stringify(record));
   }
-  return interactionEdit(interaction, "Criminal role removed.");
+  return interactionEdit(env, interaction, "Criminal role removed.");
 }
