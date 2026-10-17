@@ -58,6 +58,9 @@ export default {
       return cors(env, json({ error: String(e.message || e) }, 500));
     }
   },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(settleSelectBoard(env));
+  },
 };
 
 function json(data, status = 200) {
@@ -451,6 +454,10 @@ async function handleDiscordInteraction(request, env, ctx) {
       ctx.waitUntil(processJailCommand(env, interaction, name));
       return Response.json({ type: 5, data: { flags: 64 } });
     }
+    if (name === "selectboard") {
+      ctx.waitUntil(processSelectBoard(env, interaction));
+      return Response.json({ type: 5, data: { flags: 64 } });
+    }
     return Response.json({ type: 4, data: { content: "Unknown command.", flags: 64 } });
   }
 
@@ -609,6 +616,28 @@ async function registerSlashCommands(env) {
       type: 1,
       options: [
         { name: "user", description: "Citizen whose record to scrub", type: 6, required: true },
+      ],
+    },
+    {
+      name: "selectboard",
+      description: "Vault admins: clear the board and open the next vote.",
+      type: 1,
+      options: [
+        { name: "action", description: "Start a vote or close the current one", type: 3, required: true, choices: [
+          { name: "start", value: "start" },
+          { name: "close", value: "close" },
+        ] },
+        { name: "hours", description: "How long the poll stays open", type: 4, required: false },
+        { name: "candidate_1", description: "Candidate", type: 6, required: false },
+        { name: "candidate_2", description: "Candidate", type: 6, required: false },
+        { name: "candidate_3", description: "Candidate", type: 6, required: false },
+        { name: "candidate_4", description: "Candidate", type: 6, required: false },
+        { name: "candidate_5", description: "Candidate", type: 6, required: false },
+        { name: "candidate_6", description: "Candidate", type: 6, required: false },
+        { name: "candidate_7", description: "Candidate", type: 6, required: false },
+        { name: "candidate_8", description: "Candidate", type: 6, required: false },
+        { name: "candidate_9", description: "Candidate", type: 6, required: false },
+        { name: "candidate_10", description: "Candidate", type: 6, required: false },
       ],
     },
   ];
@@ -1039,4 +1068,108 @@ async function scrubCitizen(env, interaction, guildId, userId, citizen) {
     await env.AUTH.put(`jail:${citizen.uuid}`, JSON.stringify(record));
   }
   return interactionEdit(env, interaction, "Criminal role removed.");
+}
+
+
+const SELECT_BOARD_ROLE_ID = "1548709592974893106";
+
+async function listGuildMembers(env, guildId) {
+  const members = [];
+  let after = "0";
+  for (let page = 0; page < 10; page++) {
+    const batch = await discordApi(env, `/guilds/${guildId}/members?limit=1000&after=${after}`);
+    if (!Array.isArray(batch) || !batch.length) break;
+    members.push(...batch);
+    after = batch[batch.length - 1].user.id;
+    if (batch.length < 1000) break;
+  }
+  return members;
+}
+
+async function stripSelectBoard(env, guildId) {
+  const members = await listGuildMembers(env, guildId);
+  let removed = 0;
+  for (const member of members) {
+    const roles = (member.roles || []).map(String);
+    if (!roles.includes(SELECT_BOARD_ROLE_ID) || member.user?.bot) continue;
+    await setMemberRoles(env, guildId, member.user.id, roles.filter((id) => id !== SELECT_BOARD_ROLE_ID));
+    removed++;
+  }
+  return removed;
+}
+
+async function processSelectBoard(env, interaction) {
+  try {
+    await interactionEdit(env, interaction, "Working…");
+    if (!isVaultAdminMember(interaction)) return interactionEdit(env, interaction, "Only the vault admin role can use this.");
+    const guildId = String(interaction.guild_id || env.DISCORD_GUILD_ID || "").trim();
+    const channelId = interaction.channel_id;
+    if (!guildId || !channelId) return interactionEdit(env, interaction, "Use this in the server channel where the poll should appear.");
+    const action = String(slashOpt(interaction, "action") || "start");
+    if (action === "close") {
+      const result = await settleSelectBoard(env, true);
+      return interactionEdit(env, interaction, result || "No open Select Board poll.");
+    }
+    const ids = [];
+    for (let i = 1; i <= 10; i++) {
+      const id = slashOpt(interaction, "candidate_" + i);
+      if (id && !ids.includes(String(id))) ids.push(String(id));
+    }
+    if (ids.length < 2) return interactionEdit(env, interaction, "Add at least two candidates. Discord polls allow up to 10.");
+    const hours = Math.max(1, Math.min(168, Number(slashOpt(interaction, "hours")) || 24));
+    const removed = await stripSelectBoard(env, guildId);
+    const users = interaction.data?.resolved?.users || {};
+    const answers = ids.map((id) => ({
+      poll_media: { text: String(users[id]?.global_name || users[id]?.username || id).slice(0, 55) },
+    }));
+    const message = await discordApi(env, `/channels/${channelId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({
+        content: "Select Board vote. The six names with the most votes take the role.",
+        poll: {
+          question: { text: "Who should sit on the Select Board?" },
+          answers,
+          duration: hours,
+          allow_multiselect: true,
+          layout_type: 1,
+        },
+      }),
+    });
+    const answerMap = {};
+    (message.poll?.answers || []).forEach((answer, index) => { answerMap[answer.answer_id || answer.id] = ids[index]; });
+    await env.AUTH.put("selectboard:current", JSON.stringify({
+      guildId, channelId, messageId: message.id, answers: answerMap, hours, openedAt: new Date().toISOString(),
+    }));
+    return interactionEdit(env, interaction, `Select Board cleared from ${removed} member${removed === 1 ? "" : "s"}. Poll is open for ${hours} hours.`);
+  } catch (e) {
+    return interactionEdit(env, interaction, discordError(e));
+  }
+}
+
+async function settleSelectBoard(env, force = false) {
+  const current = await env.AUTH.get("selectboard:current", "json");
+  if (!current?.messageId) return "";
+  const message = await discordApi(env, `/channels/${current.channelId}/messages/${current.messageId}`);
+  const poll = message.poll;
+  const expired = poll?.expiry && Date.parse(poll.expiry) <= Date.now();
+  if (!force && !poll?.results?.is_finalized && !expired) return "";
+  const counts = poll?.results?.answer_counts || [];
+  const ranked = counts
+    .map((row) => ({ id: current.answers[row.id], count: row.count || 0 }))
+    .filter((row) => row.id)
+    .sort((a, b) => b.count - a.count);
+  const winners = ranked.filter((row) => row.count > 0).slice(0, 6);
+  for (const winner of winners) {
+    const member = await guildMember(env, current.guildId, winner.id);
+    const roles = new Set((member.roles || []).map(String));
+    roles.add(SELECT_BOARD_ROLE_ID);
+    await setMemberRoles(env, current.guildId, winner.id, [...roles]);
+  }
+  await env.AUTH.delete("selectboard:current");
+  const names = winners.length ? winners.map((row) => `<@${row.id}> (${row.count})`).join(", ") : "No one received a vote.";
+  await discordApi(env, `/channels/${current.channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ content: `Select Board seated: ${names}` }),
+  });
+  return `Seated ${winners.length} member${winners.length === 1 ? "" : "s"}.`;
 }
