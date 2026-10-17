@@ -887,7 +887,7 @@ const VAULT_ADMIN_ROLE_ID = "1561097303027093595";
 const JAILED_ROLE_ID = "1559704335590490244";
 
 function criminalRoleId(env) {
-  return String(env.DISCORD_CRIMINAL_ROLE_ID || "").trim();
+  return String(env.DISCORD_CRIMINAL_ROLE_ID || "1459596363120509111").trim();
 }
 
 async function interactionEdit(interaction, content) {
