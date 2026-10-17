@@ -750,6 +750,8 @@
       const payCb = row.querySelector('.job-perm-pay');
       const manageCb = row.querySelector('.job-perm-manage');
       const isLeader = leaderCb ? leaderCb.checked : false;
+      const autoCb = row.querySelector('.job-autopay');
+      const hoursInput = row.querySelector('.job-autopay-hours');
       const job = {
         role: row.querySelector('.job-role-name').value.trim(),
         salary: parseInt(row.querySelector('.job-salary').value, 10) || 0,
@@ -757,6 +759,8 @@
         canManage: manageCb ? manageCb.checked : false,
         amount: parseInt(row.querySelector('.job-amount').value, 10) || 1,
         isLeader,
+        autopay: autoCb ? autoCb.checked : false,
+        autopayHours: hoursInput ? (parseFloat(hoursInput.value) || 0) : 0,
         underlings: [],
       };
       if (isLeader) {
@@ -1000,6 +1004,14 @@
           <label class="inline-flex items-center gap-2 text-sm text-vv-green-400/90 cursor-pointer">
             <input type="checkbox" class="job-is-leader rounded border-white/20 bg-vv-blue-950 text-vv-green-500 focus:ring-vv-green-500/40" onchange="toggleLeader(this)" />
             Leader
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-white/60 cursor-pointer">
+            <input type="checkbox" class="job-autopay rounded border-white/20 bg-vv-blue-950 text-vv-green-500 focus:ring-vv-green-500/40" />
+            Autopay
+          </label>
+          <label class="inline-flex items-center gap-2 text-xs text-white/40">
+            Hours / week
+            <input type="number" min="0" step="0.5" value="40" class="job-autopay-hours w-16 bg-vv-blue-950 border border-white/10 rounded-lg px-2 py-1 text-sm font-mono text-center" />
           </label>
           ` : ''}
           <div class="flex items-center gap-2 ${isSub ? '' : 'ml-auto'}">
