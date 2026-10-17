@@ -450,6 +450,7 @@ async function handleDiscordInteraction(request, env, ctx) {
     if (name === "pay") return slashPay(env, interaction);
     if (name === "act") return slashAct(env, interaction);
     if (name === "comp") return slashComp(env, interaction);
+    if (name === "help" || interaction.data?.type === 4) return slashHelp(interaction);
     if (name === "jail" || name === "unjail" || name === "scrub") {
       ctx.waitUntil(processJailCommand(env, interaction, name));
       return Response.json({ type: 5, data: { flags: 64 } });
@@ -528,6 +529,11 @@ async function registerSlashCommands(env) {
   }
   const guildId = env.DISCORD_GUILD_ID;
   const body = [
+    {
+      name: "help",
+      description: "List the commands you can use.",
+      type: 1,
+    },
     {
       name: "syncmembers",
       description: "Scan this server and create VAULT accounts for everyone with the citizen role.",
@@ -654,7 +660,22 @@ async function registerSlashCommands(env) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return json({ error: data.message || res.statusText, data }, res.status);
-  return json({ ok: true, commands: data });
+  let entry = null;
+  try {
+    const entryRes = await fetch(`https://discord.com/api/v10/applications/${appId}/commands`, {
+      method: "PUT",
+      headers: {
+        Authorization: "Bot " + String(token).trim(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([{ name: "help", description: "Show the commands you can use", type: 4, handler: 1 }]),
+    });
+    entry = await entryRes.json().catch(() => ({}));
+    if (!entryRes.ok) entry = { error: entry.message || entryRes.statusText };
+  } catch (e) {
+    entry = { error: String(e.message || e) };
+  }
+  return json({ ok: true, commands: data, entryPoint: entry });
 }
 
 async function processSyncMembers(env, interaction) {
@@ -913,6 +934,7 @@ async function slashComp(env, interaction) {
 
 
 const VAULT_ADMIN_ROLE_ID = "1561097303027093595";
+const POLICE_ROLE_ID = "1460726539045044225";
 const JAILED_ROLE_ID = "1559704335590490244";
 
 function criminalRoleId(env) {
@@ -951,9 +973,14 @@ function discordError(e) {
   return "Jail command failed: " + msg;
 }
 
+function memberRoles(interaction) {
+  return (interaction.member?.roles || []).map(String);
+}
 function isVaultAdminMember(interaction) {
-  const roles = interaction.member?.roles || [];
-  return roles.map(String).includes(VAULT_ADMIN_ROLE_ID);
+  return memberRoles(interaction).includes(VAULT_ADMIN_ROLE_ID);
+}
+function isPoliceMember(interaction) {
+  return memberRoles(interaction).includes(POLICE_ROLE_ID) || isVaultAdminMember(interaction);
 }
 
 async function guildMember(env, guildId, userId) {
@@ -994,8 +1021,11 @@ async function nextPrisonNumber(env) {
 async function processJailCommand(env, interaction, name) {
   try {
     await interactionEdit(env, interaction, "Working…");
-    if (!isVaultAdminMember(interaction)) {
-      return interactionEdit(env, interaction, "Only the vault admin role can use this.");
+    if ((name === "jail" || name === "unjail") && !isPoliceMember(interaction)) {
+      return interactionEdit(env, interaction, "Only police or a vault admin can use this.");
+    }
+    if (name === "scrub" && !isVaultAdminMember(interaction)) {
+      return interactionEdit(env, interaction, "Only a vault admin can scrub a record.");
     }
     const guildId = String(interaction.guild_id || env.DISCORD_GUILD_ID || "").trim();
     if (!guildId) return interactionEdit(env, interaction, "This command must be used in the server.");
@@ -1172,4 +1202,33 @@ async function settleSelectBoard(env, force = false) {
     body: JSON.stringify({ content: `Select Board seated: ${names}` }),
   });
   return `Seated ${winners.length} member${winners.length === 1 ? "" : "s"}.`;
+}
+
+
+const HELP = {
+  resident: [
+    ["/help", "List the commands you can use."],
+    ["/pay user amount [note]", "Pay another citizen from your vault. Both people see the receipt."],
+    ["/act type", "Show your checking, savings, or loan balance."],
+    ["/comp company action [style]", "Company tools. showoff is public. check, report, and chart are private."],
+  ],
+  police: [
+    ["/jail user [reason]", "Store their roles, give jailed, criminal, and a prison ID."],
+    ["/unjail user [scrub]", "Restore stored roles. Scrub also removes criminal."],
+  ],
+  admin: [
+    ["/scrub user", "Remove the criminal role."],
+    ["/selectboard start", "Clear the board and open a poll. Top 6 are seated."],
+    ["/selectboard close", "Close the current poll and seat the winners."],
+    ["/syncmembers", "Create VAULT accounts for everyone with the citizen role."],
+  ],
+};
+
+function slashHelp(interaction) {
+  const admin = isVaultAdminMember(interaction);
+  const police = isPoliceMember(interaction);
+  const lines = ["**Commands you can use**", ...HELP.resident.map(([c, d]) => `\`${c}\` — ${d}`)];
+  if (police) lines.push("", "**Police**", ...HELP.police.map(([c, d]) => `\`${c}\` — ${d}`));
+  if (admin) lines.push("", "**Vault admin**", ...HELP.admin.map(([c, d]) => `\`${c}\` — ${d}`));
+  return ephemeral(lines.join("\n"));
 }
