@@ -179,6 +179,12 @@ export default {
         if (url.pathname === "/admin/companies/dedupe" && request.method === "POST") {
           return await send(dedupeCompanies(env), "company.dedupe");
         }
+        if (url.pathname === "/admin/gov-requests" && request.method === "GET") {
+          return cors(env, await listGovRequests(env));
+        }
+        if (url.pathname === "/admin/gov-request/decide" && request.method === "POST") {
+          return await send(decideGovRequest(request, env, gate.admin), "gov.decide");
+        }
         return cors(env, json({ error: "Not found" }, 404));
       }
 
@@ -188,6 +194,49 @@ export default {
     }
   },
 };
+
+
+async function listGovRequests(env) {
+  const items = (await env.AUTH.get("gov:requests", "json")) || [];
+  return json({ items });
+}
+
+async function decideGovRequest(request, env, admin) {
+  const body = await request.json().catch(() => ({}));
+  const id = String(body.id || "").trim();
+  const approve = body.approve === true || String(body.decision || "").toLowerCase() === "accept";
+  if (!id) return json({ error: "id required" }, 400);
+  const items = (await env.AUTH.get("gov:requests", "json")) || [];
+  const req = items.find((r) => r.id === id);
+  if (!req) return json({ error: "Request not found" }, 404);
+  if (req.status !== "pending") return json({ error: "Request already decided" }, 409);
+  req.status = approve ? "accepted" : "rejected";
+  req.decidedBy = admin;
+  req.decidedAt = new Date().toISOString();
+  if (approve) {
+    const co = await env.AUTH.get(`company:${req.companyId}`, "json");
+    if (!co) return json({ error: "Company not found" }, 404);
+    co.balance = Math.round((Number(co.balance || 0) + Number(req.amount || 0)) * 100) / 100;
+    await env.AUTH.put(`company:${co.id}`, JSON.stringify(co));
+    const dir = (await env.AUTH.get("directory:companies", "json")) || [];
+    const idx = dir.findIndex((c) => c.id === co.id);
+    if (idx >= 0) dir[idx] = { ...dir[idx], balance: co.balance };
+    await env.AUTH.put("directory:companies", JSON.stringify(dir));
+    const list = (await env.AUTH.get(`ctx:${co.id}`, "json")) || [];
+    list.unshift({
+      id: crypto.randomUUID(),
+      at: new Date().toISOString(),
+      type: "government_grant",
+      label: `Government grant · ${req.reason}`,
+      amount: Number(req.amount || 0),
+      by: admin,
+      note: "Infinite government source",
+    });
+    await env.AUTH.put(`ctx:${co.id}`, JSON.stringify(list.slice(0, 200)));
+  }
+  await env.AUTH.put("gov:requests", JSON.stringify(items));
+  return json({ ok: true, request: req });
+}
 
 function normCompanyName(name) {
   return String(name || "")
