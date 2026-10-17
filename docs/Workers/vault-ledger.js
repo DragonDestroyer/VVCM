@@ -22,6 +22,7 @@
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(settleShiftPayroll(env).catch((e) => console.error("payroll", e)));
+    ctx.waitUntil(settleWeeklyBank(env).catch((e) => console.error("weekly", e)));
   },
 
   async fetch(request, env) {
@@ -113,6 +114,10 @@ export default {
       if (url.pathname.startsWith("/companies/") && url.pathname.endsWith("/structure") && request.method === "POST") {
         const id = url.pathname.slice("/companies/".length, -"/structure".length);
         return cors(env, await updateCompanyStructure(request, env, id));
+      }
+      if (url.pathname.startsWith("/companies/") && url.pathname.endsWith("/gov-request") && request.method === "POST") {
+        const id = url.pathname.slice("/companies/".length, -"/gov-request".length);
+        return cors(env, await createGovRequest(request, env, id));
       }
       if (url.pathname.startsWith("/contracts/") && url.pathname.endsWith("/respond") && request.method === "POST") {
         const id = url.pathname.slice("/contracts/".length, -"/respond".length);
@@ -1614,6 +1619,154 @@ async function runPayrollNow(request, env) {
   return json({ ok: true, ...result });
 }
 
+
+
+function utcWeekKey(date = new Date()) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return d.getUTCFullYear() + "-W" + String(week).padStart(2, "0");
+}
+
+function walkRoles(roles, visit) {
+  for (const role of roles || []) {
+    visit(role);
+    if (Array.isArray(role.underlings)) walkRoles(role.underlings, visit);
+  }
+}
+
+async function settleWeeklyBank(env) {
+  const week = utcWeekKey();
+  const marker = (await env.AUTH.get("bank:weekly:last", "json")) || {};
+  if (marker.week === week) return { week, skipped: true };
+  const interest = await settleSavingsInterest(env, week);
+  const autopay = await settleRoleAutopay(env, week);
+  await env.AUTH.put("bank:weekly:last", JSON.stringify({ week, at: new Date().toISOString(), interest, autopay }));
+  return { week, interest, autopay };
+}
+
+async function settleSavingsInterest(env, week) {
+  const rates = await bankRateTable(env);
+  const apr = Number(rates.savingsApr || 0);
+  const dir = (await env.AUTH.get("directory:citizens", "json")) || [];
+  let count = 0;
+  let total = 0;
+  for (const row of dir) {
+    const uname = String(row.username || row.handle || "").toLowerCase();
+    if (!uname) continue;
+    const citizen = await loadCitizen(env, uname);
+    if (!citizen) continue;
+    const items = (await env.AUTH.get(`bank:accounts:${uname}`, "json")) || [];
+    let dirty = false;
+    for (const account of items) {
+      if (account.type !== "savings" || account.status === "closed") continue;
+      const balance = Number(account.balance || 0);
+      if (!(balance > 0) || !(apr > 0)) continue;
+      const interest = Math.round(balance * (apr / 100) / 52 * 100) / 100;
+      if (!(interest > 0)) continue;
+      account.balance = Math.round((balance + interest) * 100) / 100;
+      account.lastInterestWeek = week;
+      dirty = true;
+      count += 1;
+      total += interest;
+      if (citizen.uuid) {
+        await appendTx(env, citizen.uuid, {
+          type: "interest",
+          label: `Savings interest · ${apr}% APY`,
+          amount: interest,
+          note: `${week} · weekly 1/52 of APY`,
+        });
+      }
+    }
+    if (dirty) await env.AUTH.put(`bank:accounts:${uname}`, JSON.stringify(items));
+  }
+  return { count, total: Math.round(total * 100) / 100, apr };
+}
+
+async function settleRoleAutopay(env, week) {
+  const dir = (await env.AUTH.get("directory:companies", "json")) || [];
+  const paid = [];
+  for (const row of dir) {
+    const co = await loadCompanyRecord(env, row.id);
+    if (!co) continue;
+    let dirty = false;
+    for (const dept of co.departments || []) {
+      walkRoles(dept.roles || dept.jobs || [], (role) => {
+        role.__dept = dept.name || "General";
+      });
+      const roles = [];
+      walkRoles(dept.roles || dept.jobs || [], (role) => roles.push(role));
+      for (const role of roles) {
+        if (!role.autopay) continue;
+        const hours = Number(role.autopayHours || 0);
+        const rate = Number(role.salary ?? role.rate ?? 0);
+        if (!(hours > 0) || !(rate > 0)) continue;
+        const amount = Math.round(hours * rate * 100) / 100;
+        for (const member of role.members || []) {
+          const uname = String(member.username || member.handle || "").toLowerCase();
+          if (!uname) continue;
+          const citizen = await loadCitizen(env, uname);
+          if (!citizen) continue;
+          if (!citizen.uuid) citizen.uuid = crypto.randomUUID();
+          if (typeof citizen.balance !== "number") citizen.balance = 0;
+          citizen.balance = Math.round((Number(citizen.balance) + amount) * 100) / 100;
+          co.balance = Math.round((Number(co.balance || 0) - amount) * 100) / 100;
+          dirty = true;
+          await saveCitizen(env, citizen);
+          await appendTx(env, citizen.uuid, {
+            type: "autopay",
+            label: `Weekly autopay · ${co.name} · ${role.role || role.name || "Role"}`,
+            amount,
+            note: `${hours}h @ ${rate}/h · ${week}`,
+            counterparty: co.id,
+          });
+          await appendCompanyTx(env, co.id, {
+            type: "salary",
+            label: `Autopay · ${citizen.displayName || uname} · ${role.role || role.name || "Role"}`,
+            amount: -amount,
+            by: "autopay",
+            counterparty: uname,
+          });
+          paid.push({ companyId: co.id, username: uname, amount, role: role.role || role.name });
+        }
+      }
+    }
+    if (dirty) await saveCompanyRecord(env, co);
+  }
+  return { count: paid.length, paid };
+}
+
+async function createGovRequest(request, env, id) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  id = decodeURIComponent(id);
+  const co = await loadCompanyRecord(env, id);
+  if (!co) return json({ error: "Company not found" }, 404);
+  const owners = [String(co.owner || "").toLowerCase(), ...coOwnerNames(co)];
+  if (!owners.includes(uname)) return json({ error: "Only an owner or co-owner can request government funds" }, 403);
+  const body = await request.json().catch(() => ({}));
+  const amount = Math.round(Number(body.amount) * 100) / 100;
+  const reason = String(body.reason || "").trim().slice(0, 500);
+  if (!(amount > 0)) return json({ error: "Amount must be positive" }, 400);
+  if (!reason) return json({ error: "A short reason is required" }, 400);
+  const items = (await env.AUTH.get("gov:requests", "json")) || [];
+  const req = {
+    id: crypto.randomUUID(),
+    companyId: co.id,
+    companyName: co.name,
+    owner: uname,
+    amount,
+    reason,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+  items.unshift(req);
+  await env.AUTH.put("gov:requests", JSON.stringify(items.slice(0, 200)));
+  return json({ ok: true, request: req });
+}
 
 const BANK_RATE_DEFAULTS = { checkingApr: 0.5, savingsApr: 2, loanApr: 8, billingDays: 30 };
 
