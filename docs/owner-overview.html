@@ -116,6 +116,7 @@
           <div class="flex flex-wrap items-center gap-2 mb-1">
             <h1 id="company-name" class="text-2xl sm:text-3xl font-bold tracking-tight">Loading…</h1>
             <span id="company-role-badge" class="text-xs bg-vv-blue-500/20 text-vv-blue-300 px-2 py-0.5 rounded-full">Owner</span>
+            <button type="button" onclick="requestGovernmentFunds()" class="text-xs border border-vv-green-500/40 text-vv-green-300 px-2 py-0.5 rounded-full hover:bg-vv-green-500/10">Request government funds</button>
           </div>
           <p id="company-desc" class="text-white/50 text-sm leading-relaxed max-w-xl">
             Loading company details…
@@ -1693,10 +1694,17 @@
               <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center" data-role-index="${ri}">
                 <input data-role-title class="sm:col-span-5 bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" value="${String(r.role || r.name || '').replace(/"/g, '&quot;')}" placeholder="Title" />
                 <input data-role-pay type="number" min="0" class="sm:col-span-3 bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono" value="${r.salary ?? r.rate ?? 0}" placeholder="Pay /h" />
-                <label class="sm:col-span-3 text-xs text-white/60 flex items-center gap-2">
+                <label class="sm:col-span-2 text-xs text-white/60 flex items-center gap-2">
                   <input type="checkbox" data-role-leader ${r.isLeader ? 'checked' : ''} /> Leader
                 </label>
                 <button type="button" onclick="removeManageRole(${di},${ri})" class="sm:col-span-1 text-xs text-red-400">✕</button>
+                <label class="sm:col-span-4 text-xs text-white/60 flex items-center gap-2">
+                  <input type="checkbox" data-role-autopay ${r.autopay ? 'checked' : ''} /> Autopay
+                </label>
+                <label class="sm:col-span-4 text-xs text-white/40 flex items-center gap-2">
+                  Hours/week
+                  <input data-role-hours type="number" min="0" step="0.5" class="w-20 bg-vv-blue-950 border border-white/10 rounded-lg px-2 py-1 text-sm font-mono" value="${r.autopayHours ?? 40}" />
+                </label>
               </div>
             `).join('')}
           </div>
@@ -1718,6 +1726,8 @@
             name: row.querySelector('[data-role-title]').value.trim(),
             salary: parseFloat(row.querySelector('[data-role-pay]').value) || 0,
             isLeader: row.querySelector('[data-role-leader]').checked,
+            autopay: row.querySelector('[data-role-autopay]').checked,
+            autopayHours: parseFloat(row.querySelector('[data-role-hours]').value) || 0,
           });
         });
         depts.push({
@@ -1775,6 +1785,18 @@
       };
       reader.readAsDataURL(file);
     }
+
+    async function requestGovernmentFunds() {
+      if (!COMPANY || !COMPANY.id) return;
+      const amount = parseFloat(prompt('How many Vidiadollars should the government send this company?'));
+      if (!(amount > 0)) return;
+      const reason = (prompt('Short reason for the request') || '').trim();
+      if (!reason) return;
+      const res = await VV_WORKER.post('/companies/' + encodeURIComponent(COMPANY.id) + '/gov-request', { amount, reason });
+      if (!res.ok) { alert(res.error || res.data?.error || 'Request failed'); return; }
+      alert('Request sent. An administrator can accept it from the admin panel.');
+    }
+
     async function saveCompanyStructure() {
       const status = document.getElementById('structure-status');
       if (!COMPANY.id) return;
