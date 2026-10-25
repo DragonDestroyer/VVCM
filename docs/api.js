@@ -268,6 +268,63 @@ window.VV_mdLite = function (src) {
   return html || '<p class="text-white/40 text-sm">Changelog is empty.</p>';
 };
 
+
+window.VV_openFeedback = function () {
+  let modal = document.getElementById('vv-feedback-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'vv-feedback-modal';
+    modal.className = 'hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4';
+    modal.innerHTML = '<div class="max-w-lg mx-auto mt-16 bg-vv-blue-900 border border-white/10 rounded-2xl p-5">' +
+      '<div class="flex items-center justify-between mb-3">' +
+      '<h2 class="text-sm font-medium text-white/60 uppercase tracking-wider">Bug report / suggestion</h2>' +
+      '<button type="button" class="text-white/40 hover:text-white text-lg leading-none" onclick="document.getElementById(\'vv-feedback-modal\').classList.add(\'hidden\')">&times;</button>' +
+      '</div>' +
+      '<form id="vv-feedback-form" class="space-y-3">' +
+      '<label class="block text-xs text-white/40">Type' +
+      '<select name="kind" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm">' +
+      '<option value="bug">Bug report</option><option value="suggestion">Suggestion</option></select></label>' +
+      '<label class="block text-xs text-white/40">Title' +
+      '<input name="title" required maxlength="120" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="Short summary" /></label>' +
+      '<label class="block text-xs text-white/40">Details' +
+      '<textarea name="details" required rows="5" maxlength="4000" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="What happened, or what you want changed"></textarea></label>' +
+      '<p id="vv-feedback-status" class="text-xs text-white/40"></p>' +
+      '<button type="submit" class="bg-vv-green-500 hover:bg-vv-green-400 text-vv-blue-950 font-semibold text-sm px-4 py-2 rounded-xl">Send</button>' +
+      '</form></div>';
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+    document.body.appendChild(modal);
+    modal.querySelector('#vv-feedback-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const status = document.getElementById('vv-feedback-status');
+      const data = {
+        kind: form.kind.value,
+        title: form.title.value.trim(),
+        details: form.details.value.trim(),
+        page: location.pathname + location.search,
+      };
+      status.textContent = 'Sending…';
+      status.className = 'text-xs text-white/40';
+      try {
+        const res = await VV_WORKER.post('/feedback', data);
+        if (!res.ok) {
+          status.textContent = res.error || res.data?.error || 'Could not send.';
+          status.className = 'text-xs text-red-400';
+          return;
+        }
+        const url = res.data && res.data.issueUrl;
+        status.textContent = url ? 'Sent. Issue opened on GitHub.' : (res.data && res.data.warning) || 'Sent.';
+        status.className = 'text-xs text-vv-green-400';
+        form.reset();
+      } catch (err) {
+        status.textContent = err.message || 'Could not send.';
+        status.className = 'text-xs text-red-400';
+      }
+    });
+  }
+  modal.classList.remove('hidden');
+};
+
 window.VV_openChangelog = async function () {
   let modal = document.getElementById('vv-changelog-modal');
   if (!modal) {
