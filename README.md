@@ -14,12 +14,6 @@ Hosted via **Cloudflare Pages**, source managed in **GitHub**.
 | `owner-overview.html` | Company owner view (Riverfront Café template) |
 | `worker-overview.html` | Company worker view (Vidia Motors template) |
 
-## Placeholders
-
-- Discord login → dashboard as **Dragon** (testing only)
-- Money / applications → `localStorage` + console until a database API exists
-- Flask sketch in `backend/` is **not** deployed to Cloudflare
-
 ## Design
 
 - Address users as **citizens**
