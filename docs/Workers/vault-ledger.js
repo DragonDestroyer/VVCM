@@ -143,6 +143,9 @@ export default {
       if (url.pathname === "/reports" && request.method === "POST") {
         return cors(env, await submitShiftReport(request, env));
       }
+      if (url.pathname === "/feedback" && request.method === "POST") {
+        return cors(env, await submitFeedback(request, env));
+      }
       if (url.pathname === "/reports/mine" && request.method === "GET") {
         return cors(env, await myShiftReports(request, env));
       }
@@ -1426,6 +1429,88 @@ function memberRate(citizen, co, uname) {
     }
   }
   return { gig, rate };
+}
+
+
+async function submitFeedback(request, env) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Sign in before sending a report." }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  const body = await request.json().catch(() => ({}));
+  const kind = String(body.kind || "bug").toLowerCase() === "suggestion" ? "suggestion" : "bug";
+  const title = String(body.title || "").trim().slice(0, 120);
+  const details = String(body.details || "").trim().slice(0, 4000);
+  const page = String(body.page || "").trim().slice(0, 300);
+  if (!title) return json({ error: "A title is required." }, 400);
+  if (details.length < 8) return json({ error: "Add a little more detail." }, 400);
+  const report = {
+    id: crypto.randomUUID(),
+    kind,
+    title,
+    details,
+    page,
+    username: uname,
+    createdAt: new Date().toISOString(),
+  };
+  const items = (await env.AUTH.get("feedback:reports", "json")) || [];
+  items.unshift(report);
+  await env.AUTH.put("feedback:reports", JSON.stringify(items.slice(0, 200)));
+
+  const token = String(env.GITHUB_TOKEN || env.GITHUB_ISSUES_TOKEN || "").trim();
+  if (!token) {
+    return json({ ok: true, saved: true, github: false, report, warning: "Saved in VAULT. GitHub token is not set on the ledger worker." });
+  }
+  const label = kind === "suggestion" ? "suggestion" : "bug";
+  const issueBody = [
+    details,
+    "",
+    "---",
+    `Type: ${kind}`,
+    `From: ${uname}`,
+    page ? `Page: ${page}` : "",
+    `Report id: ${report.id}`,
+  ].filter(Boolean).join("\n");
+  const gh = await fetch("https://api.github.com/repos/DragonDestroyer/VVCM/issues", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "vault-ledger",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: `[${kind === "suggestion" ? "Suggestion" : "Bug"}] ${title}`,
+      body: issueBody,
+      labels: [label],
+    }),
+  });
+  let issue = null;
+  if (!gh.ok && gh.status === 422) {
+    const retry = await fetch("https://api.github.com/repos/DragonDestroyer/VVCM/issues", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "vault-ledger",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: `[${kind === "suggestion" ? "Suggestion" : "Bug"}] ${title}`,
+        body: issueBody,
+      }),
+    });
+    if (retry.ok) issue = await retry.json();
+    else return json({ ok: true, saved: true, github: false, report, warning: "Saved in VAULT. GitHub rejected the issue." });
+  } else if (gh.ok) {
+    issue = await gh.json();
+  } else {
+    return json({ ok: true, saved: true, github: false, report, warning: "Saved in VAULT. GitHub issue was not created." });
+  }
+  report.issueUrl = issue.html_url;
+  report.issueNumber = issue.number;
+  items[0] = report;
+  await env.AUTH.put("feedback:reports", JSON.stringify(items.slice(0, 200)));
+  return json({ ok: true, saved: true, github: true, issueUrl: issue.html_url, report });
 }
 
 async function submitShiftReport(request, env) {
