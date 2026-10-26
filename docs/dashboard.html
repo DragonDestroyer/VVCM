@@ -122,9 +122,9 @@
         <p class="text-sm text-white/45 mt-1">The only public company. Open a checking or savings account, or borrow from the bank. Interest and billing are set by VAULT officers.</p>
         <div id="bank-rates" class="text-sm text-white/50 mt-4">Loading rates…</div>
         <form id="bank-rate-form" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4" onsubmit="return saveBankRates(event)">
-          <label class="text-xs text-white/40">Checking APR %<input id="rate-checking" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
-          <label class="text-xs text-white/40">Savings APR %<input id="rate-savings" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
-          <label class="text-xs text-white/40">Loan APR %<input id="rate-loan" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
+          <label class="text-xs text-white/40">Checking WPY %<input id="rate-checking" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
+          <label class="text-xs text-white/40">Savings WPY %<input id="rate-savings" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
+          <label class="text-xs text-white/40">Loan WPR %<input id="rate-loan" type="number" min="0" max="100" step="0.1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
           <label class="text-xs text-white/40">Billing days<input id="rate-days" type="number" min="1" max="365" step="1" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm"></label>
           <button class="sm:col-span-4 bg-vv-green-500 text-vv-blue-950 font-semibold rounded-xl py-2.5">Save interest rates</button>
         </form>
@@ -194,6 +194,10 @@
           <div>
             <h4 class="text-xs text-white/40 mb-2">Active</h4>
             <ul id="dash-active-contracts" class="space-y-2 text-sm text-white/40"><li>Loading…</li></ul>
+          </div>
+          <div>
+            <h4 class="text-xs text-white/40 mb-2">Past</h4>
+            <ul id="dash-past-contracts" class="space-y-2 text-sm text-white/40"><li>Loading…</li></ul>
           </div>
         </div>
       </section>
@@ -476,13 +480,13 @@
       const ratesRes = await VV_WORKER.get('/bank/rates');
       const rates = (ratesRes.data && ratesRes.data.rates) || {};
       const box = document.getElementById('bank-rates');
-      if (box) box.textContent = `Checking ${rates.checkingApr ?? '—'}% · Savings ${rates.savingsApr ?? '—'}% · Loans ${rates.loanApr ?? '—'}% · billed every ${rates.billingDays ?? '—'} days`;
+      if (box) box.textContent = `Checking ${rates.checkingWpy ?? rates.checkingApr ?? '—'}% WPY · Savings ${rates.savingsWpy ?? rates.savingsApr ?? '—'}% WPY · Loans ${rates.loanWpr ?? rates.loanApr ?? '—'}% WPR · applied Friday 00:00 UTC`;
       const form = document.getElementById('bank-rate-form');
       if (form && ratesRes.data && ratesRes.data.canEdit) {
         form.classList.remove('hidden');
-        document.getElementById('rate-checking').value = rates.checkingApr ?? 0;
-        document.getElementById('rate-savings').value = rates.savingsApr ?? 0;
-        document.getElementById('rate-loan').value = rates.loanApr ?? 0;
+        document.getElementById('rate-checking').value = rates.checkingWpy ?? rates.checkingApr ?? 0;
+        document.getElementById('rate-savings').value = rates.savingsWpy ?? rates.savingsApr ?? 0;
+        document.getElementById('rate-loan').value = rates.loanWpr ?? rates.loanApr ?? 0;
         document.getElementById('rate-days').value = rates.billingDays ?? 30;
       }
       const acc = await VV_WORKER.get('/bank/accounts');
@@ -491,7 +495,7 @@
       if (accBox) {
         accBox.innerHTML = accounts.length ? accounts.map(a => `<div class="border border-white/10 rounded-xl p-3">
           <div class="flex justify-between"><span class="capitalize text-white/80">${a.type}</span><span class="font-mono text-vv-green-400">${(typeof moneyText === 'function' ? moneyText(a.balance) : a.balance)}</span></div>
-          <div class="text-xs text-white/35 mt-1">${a.apr}% APR</div>
+          <div class="text-xs text-white/35 mt-1">${a.wpy ?? a.apr}% WPY</div>
           <div class="flex gap-2 mt-2">
             <button type="button" onclick="bankMove('${a.id}','deposit')" class="text-xs px-2 py-1 rounded-lg border border-white/10">Deposit</button>
             <button type="button" onclick="bankMove('${a.id}','withdraw')" class="text-xs px-2 py-1 rounded-lg border border-white/10">Withdraw</button>
@@ -501,7 +505,7 @@
       const loans = await VV_WORKER.get('/bank/loans');
       const loanBox = document.getElementById('bank-loans');
       const items = (loans.data && loans.data.items) || [];
-      if (loanBox) loanBox.innerHTML = items.length ? items.map(l => `<div class="border border-white/10 rounded-xl p-3"><div class="flex justify-between"><span>${l.purpose}</span><span class="font-mono">${l.balance}</span></div><div class="text-xs text-white/35">${l.apr}% APR · next bill ${l.nextBillAt ? l.nextBillAt.slice(0,10) : ''}</div></div>`).join('') : 'No loans.';
+      if (loanBox) loanBox.innerHTML = items.length ? items.map(l => `<div class="border border-white/10 rounded-xl p-3"><div class="flex justify-between"><span>${l.purpose}</span><span class="font-mono">${l.balance}</span></div><div class="text-xs text-white/35">${l.wpr ?? l.apr}% WPR · Friday 00:00 UTC</div></div>`).join('') : 'No loans.';
     }
     async function openBankAccount(type) {
       const res = await VV_WORKER.post('/bank/accounts', { type });
@@ -529,9 +533,9 @@
     async function saveBankRates(ev) {
       ev.preventDefault();
       const res = await VV_WORKER.post('/bank/rates', {
-        checkingApr: Number(document.getElementById('rate-checking').value),
-        savingsApr: Number(document.getElementById('rate-savings').value),
-        loanApr: Number(document.getElementById('rate-loan').value),
+        checkingWpy: Number(document.getElementById('rate-checking').value),
+        savingsWpy: Number(document.getElementById('rate-savings').value),
+        loanWpr: Number(document.getElementById('rate-loan').value),
         billingDays: Number(document.getElementById('rate-days').value),
       });
       if (!res.ok) alert(res.error || 'Could not save rates');
@@ -1203,6 +1207,7 @@
         const inc = document.getElementById('dash-incoming-contracts');
         const out = document.getElementById('dash-outgoing-contracts');
         const act = document.getElementById('dash-active-contracts');
+        const past = document.getElementById('dash-past-contracts');
         const st = document.getElementById('contracts-status');
         const res = await VV_WORKER.get('/contracts');
         if (!res.ok) {
@@ -1212,10 +1217,12 @@
           if (inc) inc.innerHTML = errorLi(code, msg);
           if (out) out.innerHTML = errorLi(code, msg);
           if (act) act.innerHTML = errorLi(code, msg);
+          if (past) past.innerHTML = errorLi(code, msg);
           return;
         }
         const pending = (res.data && res.data.pending) || [];
         const active = (res.data && res.data.active) || [];
+        const pastItems = (res.data && res.data.past) || [];
         const me = (window.VV_ME_USERNAME || window.VV_CURRENT_USER || '').toLowerCase();
         const incList = pending.filter(c => String(c.target || '').toLowerCase() === me);
         const outList = pending.filter(c => String(c.from || '').toLowerCase() === me);
@@ -1256,6 +1263,13 @@
                 <div class="text-xs text-white/35 mt-1">${c.from || ''} → ${c.target || ''} · ${payLab(c)}</div>
               </a>
             </li>`).join('') : emptyLi('No contracts available.');
+        }
+        if (past) {
+          past.innerHTML = pastItems.length ? pastItems.map(c => `
+            <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3">
+              <div class="font-medium text-white">${c.description || c.id}</div>
+              <div class="text-xs text-white/35 mt-1">${c.from || ''} → ${c.target || ''} · ${c.payout ? ('paid ' + (c.payoutAmount || 0)) : 'closed without payout'}</div>
+            </li>`).join('') : emptyLi('No past contracts.');
         }
       }
 
