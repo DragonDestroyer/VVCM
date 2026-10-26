@@ -123,6 +123,14 @@ export default {
         const id = url.pathname.slice("/contracts/".length, -"/respond".length);
         return cors(env, await respondContract(request, env, id));
       }
+      if (url.pathname.startsWith("/contracts/") && url.pathname.endsWith("/close") && request.method === "POST") {
+        const id = url.pathname.slice("/contracts/".length, -"/close".length);
+        return cors(env, await closeContract(request, env, id));
+      }
+      if (url.pathname.startsWith("/contracts/") && request.method === "GET" && !url.pathname.endsWith("/chat")) {
+        const id = url.pathname.slice("/contracts/".length).replace(/\/$/, "");
+        if (id && !id.includes("/")) return cors(env, await getContract(request, env, id));
+      }
       if (url.pathname === "/jobs" && request.method === "GET") {
         return cors(env, await listMyJobs(request, env));
       }
@@ -692,6 +700,7 @@ async function listMyContracts(request, env) {
   return json({
     active: mine(data.active),
     pending: mine(data.pending),
+    past: mine(data.past),
   });
 }
 
@@ -806,6 +815,7 @@ async function companyContracts(request, env, companyId) {
     String(c.target || "").toLowerCase() === uname;
   return json({
     active: (data.active || []).filter(match),
+    past: (data.past || []).filter(match),
     outgoing: (data.pending || []).filter((c) => String(c.from || "").toLowerCase() === uname),
     incoming: (data.pending || []).filter((c) => String(c.target || "").toLowerCase() === uname),
   });
@@ -992,6 +1002,90 @@ async function companyLedgerPost(request, env, id) {
     by: uname,
   });
   return json({ ok: true, balance: co.balance, entry });
+}
+
+
+async function getContract(request, env, id) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  id = decodeURIComponent(id);
+  const c = await env.AUTH.get(`contract:${id}`, "json");
+  if (!c) return json({ error: "Contract not found" }, 404);
+  return json(c);
+}
+
+function contractPayoutAmount(c) {
+  if (Number(c.total) > 0) return Math.round(Number(c.total) * 100) / 100;
+  if (Number(c.rate) > 0 && Number(c.duration) > 0) return Math.round(Number(c.rate) * Number(c.duration) * 100) / 100;
+  return 0;
+}
+
+async function closeContract(request, env, id) {
+  const s = await sessionFromRequest(request, env);
+  if (!s) return json({ error: "Unauthorized" }, 401);
+  const uname = String(s.session.discordUsername || "").toLowerCase();
+  id = decodeURIComponent(id);
+  const body = await request.json().catch(() => ({}));
+  const payout = body.payout === true || String(body.payout || "").toLowerCase() === "yes";
+  const data = (await env.AUTH.get("directory:contracts", "json")) || { active: [], pending: [], past: [] };
+  data.active = data.active || [];
+  data.past = data.past || [];
+  const idx = data.active.findIndex((c) => c.id === id);
+  const stored = await env.AUTH.get(`contract:${id}`, "json");
+  const c = idx >= 0 ? data.active[idx] : stored;
+  if (!c || c.status === "closed") return json({ error: "Active contract not found" }, 404);
+  let allowed = String(c.from || "").toLowerCase() === uname;
+  if (!allowed && c.companyId) {
+    const co = await loadCompanyRecord(env, c.companyId);
+    allowed = !!co && (String(co.owner || "").toLowerCase() === uname || isCoOwnerOf(co, uname));
+  }
+  if (!allowed) return json({ error: "Only the company side can close this contract" }, 403);
+  const amount = payout ? contractPayoutAmount(c) : 0;
+  if (payout && !(amount > 0)) return json({ error: "This contract has no payout amount" }, 400);
+  if (payout) {
+    const targetName = String(c.target || "").toLowerCase();
+    const target = await loadCitizen(env, targetName);
+    if (!target) return json({ error: "Contract target not found" }, 404);
+    if (c.companyId) {
+      const co = await loadCompanyRecord(env, c.companyId);
+      if (!co) return json({ error: "Company not found" }, 404);
+      if (Number(co.balance || 0) < amount) return json({ error: "Company cannot cover the full payout" }, 400);
+      co.balance = Math.round((Number(co.balance || 0) - amount) * 100) / 100;
+      await saveCompanyRecord(env, co);
+      await appendCompanyTx(env, co.id, {
+        type: "contract_payout",
+        label: `Contract closed · ${target.displayName || targetName}`,
+        amount: -amount,
+        by: uname,
+        counterparty: targetName,
+      });
+    } else {
+      const payer = await loadCitizen(env, uname);
+      if (!payer || Number(payer.balance || 0) < amount) return json({ error: "Not enough balance for the full payout" }, 400);
+      payer.balance = Math.round((Number(payer.balance || 0) - amount) * 100) / 100;
+      await saveCitizen(env, payer);
+    }
+    if (!target.uuid) target.uuid = crypto.randomUUID();
+    target.balance = Math.round((Number(target.balance || 0) + amount) * 100) / 100;
+    await saveCitizen(env, target);
+    await appendTx(env, target.uuid, {
+      type: "contract_payout",
+      label: `Contract payout · ${c.companyName || c.from}`,
+      amount,
+      note: c.description || "",
+      counterparty: c.companyId || c.from,
+    });
+  }
+  c.status = "closed";
+  c.closedAt = new Date().toISOString();
+  c.closedBy = uname;
+  c.payout = payout;
+  c.payoutAmount = amount;
+  if (idx >= 0) data.active.splice(idx, 1);
+  data.past.unshift(c);
+  await env.AUTH.put("directory:contracts", JSON.stringify(data));
+  await env.AUTH.put(`contract:${id}`, JSON.stringify(c));
+  return json({ ok: true, contract: c });
 }
 
 async function respondContract(request, env, id) {
@@ -1729,18 +1823,21 @@ function walkRoles(roles, visit) {
 }
 
 async function settleWeeklyBank(env) {
+  if (new Date().getUTCDay() !== 5) return { skipped: true, reason: "not friday" };
   const week = utcWeekKey();
   const marker = (await env.AUTH.get("bank:weekly:last", "json")) || {};
   if (marker.week === week) return { week, skipped: true };
   const interest = await settleSavingsInterest(env, week);
+  const loans = await settleLoanWpr(env, week);
   const autopay = await settleRoleAutopay(env, week);
-  await env.AUTH.put("bank:weekly:last", JSON.stringify({ week, at: new Date().toISOString(), interest, autopay }));
-  return { week, interest, autopay };
+  await env.AUTH.put("bank:weekly:last", JSON.stringify({ week, at: new Date().toISOString(), interest, loans, autopay }));
+  return { week, interest, loans, autopay };
 }
 
 async function settleSavingsInterest(env, week) {
   const rates = await bankRateTable(env);
-  const apr = Number(rates.savingsApr || 0);
+  const checkingWpy = Number(rates.checkingWpy || 0);
+  const savingsWpy = Number(rates.savingsWpy || 0);
   const dir = (await env.AUTH.get("directory:citizens", "json")) || [];
   let count = 0;
   let total = 0;
@@ -1752,12 +1849,14 @@ async function settleSavingsInterest(env, week) {
     const items = (await env.AUTH.get(`bank:accounts:${uname}`, "json")) || [];
     let dirty = false;
     for (const account of items) {
-      if (account.type !== "savings" || account.status === "closed") continue;
+      if (account.status === "closed" || (account.type !== "savings" && account.type !== "checking")) continue;
+      const wpy = account.type === "savings" ? savingsWpy : checkingWpy;
       const balance = Number(account.balance || 0);
-      if (!(balance > 0) || !(apr > 0)) continue;
-      const interest = Math.round(balance * (apr / 100) / 52 * 100) / 100;
+      if (!(balance > 0) || !(wpy > 0)) continue;
+      const interest = Math.round(balance * (wpy / 100) * 100) / 100;
       if (!(interest > 0)) continue;
       account.balance = Math.round((balance + interest) * 100) / 100;
+      account.wpy = wpy;
       account.lastInterestWeek = week;
       dirty = true;
       count += 1;
@@ -1765,15 +1864,46 @@ async function settleSavingsInterest(env, week) {
       if (citizen.uuid) {
         await appendTx(env, citizen.uuid, {
           type: "interest",
-          label: `Savings interest · ${apr}% APY`,
+          label: `${account.type} yield · ${wpy}% WPY`,
           amount: interest,
-          note: `${week} · weekly 1/52 of APY`,
+          note: `${week} · Friday UTC`,
         });
       }
     }
     if (dirty) await env.AUTH.put(`bank:accounts:${uname}`, JSON.stringify(items));
   }
-  return { count, total: Math.round(total * 100) / 100, apr };
+  return { count, total: Math.round(total * 100) / 100, checkingWpy, savingsWpy };
+}
+
+
+async function settleLoanWpr(env, week) {
+  const rates = await bankRateTable(env);
+  const wpr = Number(rates.loanWpr || 0);
+  if (!(wpr > 0)) return { count: 0, total: 0, wpr };
+  const dir = (await env.AUTH.get("directory:citizens", "json")) || [];
+  let count = 0;
+  let total = 0;
+  for (const row of dir) {
+    const uname = String(row.username || row.handle || "").toLowerCase();
+    if (!uname) continue;
+    const items = (await env.AUTH.get(`bank:loans:${uname}`, "json")) || [];
+    let dirty = false;
+    for (const loan of items) {
+      if (loan.status === "closed") continue;
+      const balance = Number(loan.balance || 0);
+      if (!(balance > 0)) continue;
+      const increase = Math.round(balance * (wpr / 100) * 100) / 100;
+      if (!(increase > 0)) continue;
+      loan.balance = Math.round((balance + increase) * 100) / 100;
+      loan.wpr = wpr;
+      loan.lastWprWeek = week;
+      dirty = true;
+      count += 1;
+      total += increase;
+    }
+    if (dirty) await env.AUTH.put(`bank:loans:${uname}`, JSON.stringify(items));
+  }
+  return { count, total: Math.round(total * 100) / 100, wpr };
 }
 
 async function settleRoleAutopay(env, week) {
@@ -1859,15 +1989,17 @@ async function createGovRequest(request, env, id) {
   return json({ ok: true, request: req });
 }
 
-const BANK_RATE_DEFAULTS = { checkingApr: 0.5, savingsApr: 2, loanApr: 8, billingDays: 30 };
+const BANK_RATE_DEFAULTS = { checkingWpy: 0.5, savingsWpy: 2, loanWpr: 8, billingDays: 7 };
 
 async function bankRateTable(env) {
   const stored = (await env.AUTH.get("bank:rates", "json")) || {};
+  const checkingWpy = Number(stored.checkingWpy ?? stored.checkingApr ?? BANK_RATE_DEFAULTS.checkingWpy);
+  const savingsWpy = Number(stored.savingsWpy ?? stored.savingsApr ?? BANK_RATE_DEFAULTS.savingsWpy);
+  const loanWpr = Number(stored.loanWpr ?? stored.loanApr ?? BANK_RATE_DEFAULTS.loanWpr);
   return {
-    checkingApr: Number(stored.checkingApr ?? BANK_RATE_DEFAULTS.checkingApr),
-    savingsApr: Number(stored.savingsApr ?? BANK_RATE_DEFAULTS.savingsApr),
-    loanApr: Number(stored.loanApr ?? BANK_RATE_DEFAULTS.loanApr),
-    billingDays: Math.max(1, Number(stored.billingDays ?? BANK_RATE_DEFAULTS.billingDays) || 30),
+    checkingWpy, savingsWpy, loanWpr,
+    checkingApr: checkingWpy, savingsApr: savingsWpy, loanApr: loanWpr,
+    billingDays: Math.max(1, Number(stored.billingDays ?? BANK_RATE_DEFAULTS.billingDays) || 7),
   };
 }
 
@@ -1886,12 +2018,12 @@ async function setBankRates(request, env) {
   const body = await request.json().catch(() => ({}));
   const current = await bankRateTable(env);
   const next = {
-    checkingApr: Number(body.checkingApr ?? current.checkingApr),
-    savingsApr: Number(body.savingsApr ?? current.savingsApr),
-    loanApr: Number(body.loanApr ?? current.loanApr),
-    billingDays: Math.max(1, Number(body.billingDays ?? current.billingDays) || 30),
+    checkingWpy: Number(body.checkingWpy ?? body.checkingApr ?? current.checkingWpy),
+    savingsWpy: Number(body.savingsWpy ?? body.savingsApr ?? current.savingsWpy),
+    loanWpr: Number(body.loanWpr ?? body.loanApr ?? current.loanWpr),
+    billingDays: Math.max(1, Number(body.billingDays ?? current.billingDays) || 7),
   };
-  for (const k of ["checkingApr", "savingsApr", "loanApr"]) {
+  for (const k of ["checkingWpy", "savingsWpy", "loanWpr"]) {
     if (!Number.isFinite(next[k]) || next[k] < 0 || next[k] > 100) {
       return json({ error: "Rates must be between 0 and 100 percent" }, 400);
     }
@@ -1926,7 +2058,8 @@ async function openBankAccount(request, env) {
     id: crypto.randomUUID(),
     type,
     balance: 0,
-    apr: type === "savings" ? rates.savingsApr : rates.checkingApr,
+    wpy: type === "savings" ? rates.savingsWpy : rates.checkingWpy,
+    apr: type === "savings" ? rates.savingsWpy : rates.checkingWpy,
     billingDays: rates.billingDays,
     status: "open",
     openedAt: new Date().toISOString(),
@@ -1990,7 +2123,8 @@ async function openBankLoan(request, env) {
     id: crypto.randomUUID(),
     principal: amount,
     balance: amount,
-    apr: rates.loanApr,
+    wpr: rates.loanWpr,
+    apr: rates.loanWpr,
     billingDays: rates.billingDays,
     purpose,
     status: "open",
@@ -2006,7 +2140,7 @@ async function openBankLoan(request, env) {
       type: "loan",
       label: "VAULT bank loan",
       amount,
-      note: `${rates.loanApr}% APR · billed every ${rates.billingDays} days`,
+      note: `${rates.loanWpr}% WPR · applied every Friday 00:00 UTC`,
     });
   }
   const items = (await env.AUTH.get(`bank:loans:${uname}`, "json")) || [];
