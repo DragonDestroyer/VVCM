@@ -423,6 +423,10 @@
                   class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium px-4 py-2.5 rounded-xl transition">
             View active contracts
           </button>
+          <button type="button" onclick="showContractView('past')"
+                  class="border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium px-4 py-2.5 rounded-xl transition">
+            Past contracts
+          </button>
         </div>
 
         <!-- Create contract form -->
@@ -554,6 +558,13 @@
             <button type="button" onclick="showContractView(null)" class="text-xs text-white/35 hover:text-white/60">Close</button>
           </div>
           <ul id="active-contracts-list" class="space-y-2"></ul>
+        </div>
+        <div id="contract-past" class="hidden border-t border-white/10 pt-5 mt-2 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-medium text-white/60 uppercase tracking-wider">Past contracts</h3>
+            <button type="button" onclick="showContractView(null)" class="text-xs text-white/35 hover:text-white/60">Close</button>
+          </div>
+          <ul id="past-contracts-list" class="space-y-2"></ul>
         </div>
       </section>
 
@@ -1118,11 +1129,13 @@
     let pendingOutgoing = [];
     let pendingIncoming = [];
     let activeContracts = [];
+    let pastContracts = [];
 
     function showContractView(which) {
       document.getElementById('contract-create').classList.add('hidden');
       document.getElementById('contract-pending').classList.add('hidden');
       document.getElementById('contract-active').classList.add('hidden');
+      document.getElementById('contract-past').classList.add('hidden');
       if (which === 'create') {
         document.getElementById('contract-create').classList.remove('hidden');
         setContractTargetType(contractTargetType);
@@ -1133,6 +1146,9 @@
       } else if (which === 'active') {
         document.getElementById('contract-active').classList.remove('hidden');
         renderActiveContracts();
+      } else if (which === 'past') {
+        document.getElementById('contract-past').classList.remove('hidden');
+        renderPastContracts();
       }
     }
 
@@ -1218,13 +1234,34 @@
         : '<li class="text-sm text-white/35">No incoming proposals.</li>';
     }
 
+
+    function renderPastContracts() {
+      const list = document.getElementById('past-contracts-list');
+      list.innerHTML = pastContracts.length
+        ? pastContracts.map(c => `
+          <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3 text-sm">
+            <div class="font-medium">With ${c.with || c.target || c.from}</div>
+            <div class="text-white/50 mt-1">${c.description || ''}</div>
+            <div class="text-xs text-white/35 mt-1">${c.payout ? ('Paid out ' + (c.payoutAmount || 0)) : 'Closed without payout'}</div>
+          </li>`).join('')
+        : '<li class="text-sm text-white/35">No past contracts.</li>';
+    }
+    async function closeCompanyContract(id) {
+      const pay = confirm('Pay out the full contract amount?\\n\\nOK = pay the full amount and close.\\nCancel = close without paying.');
+      const res = await VV_WORKER.post('/contracts/' + encodeURIComponent(id) + '/close', { payout: pay });
+      if (!res.ok) { alert(res.error || res.data?.error || 'Could not close contract'); return; }
+      activeContracts = activeContracts.filter(c => c.id !== id);
+      if (res.data && res.data.contract) pastContracts.unshift({ ...res.data.contract, with: res.data.contract.target || res.data.contract.from });
+      renderActiveContracts();
+      renderPastContracts();
+    }
+
     function renderActiveContracts() {
       const list = document.getElementById('active-contracts-list');
       list.innerHTML = activeContracts.length
         ? activeContracts.map(c => `
-          <li>
-            <a href="contract-overview?id=${encodeURIComponent(c.id)}"
-               class="block bg-vv-blue-950/50 border border-white/10 hover:border-vv-green-500/40 rounded-xl px-4 py-3 text-sm transition">
+          <li class="bg-vv-blue-950/50 border border-white/10 rounded-xl px-4 py-3 text-sm">
+            <a href="contract-overview?id=${encodeURIComponent(c.id)}" class="block hover:text-vv-green-400">
               <div class="flex justify-between gap-2">
                 <span class="font-medium">With ${c.with}</span>
                 <span class="text-xs text-vv-green-400">Active · open →</span>
@@ -1232,6 +1269,7 @@
               <div class="text-white/50 mt-1">${c.description}</div>
               <div class="text-xs text-white/35 mt-1">${payLabel(c)} · ${c.duration} ${c.unit}</div>
             </a>
+            <button type="button" onclick="closeCompanyContract('${c.id}')" class="mt-2 text-xs border border-white/15 px-3 py-1.5 rounded-lg hover:border-red-400/40">Close contract</button>
           </li>`).join('')
         : '<li class="text-sm text-white/35">No active contracts.</li>';
     }
@@ -1895,6 +1933,10 @@
             description: c.description || '',
             duration: c.duration,
             unit: c.unit,
+          }));
+          pastContracts = (contracts.data.past || []).map(c => ({
+            ...c,
+            with: c.target || c.with || c.from,
           }));
         }
       }
