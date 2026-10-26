@@ -284,6 +284,14 @@ window.VV_openFeedback = function () {
       '<label class="block text-xs text-white/40">Type' +
       '<select name="kind" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm">' +
       '<option value="bug">Bug report</option><option value="suggestion">Suggestion</option></select></label>' +
+      '<fieldset id="vv-feedback-severity" class="space-y-2">' +
+      '<legend class="text-xs text-white/40">Severity</legend>' +
+      '<div class="flex flex-wrap gap-3 text-sm text-white/70">' +
+      '<label class="inline-flex items-center gap-2"><input type="checkbox" name="severity" value="low" class="rounded border-white/20 bg-vv-blue-950 text-vv-green-500" /> Low</label>' +
+      '<label class="inline-flex items-center gap-2"><input type="checkbox" name="severity" value="medium" class="rounded border-white/20 bg-vv-blue-950 text-vv-green-500" checked /> Medium</label>' +
+      '<label class="inline-flex items-center gap-2"><input type="checkbox" name="severity" value="high" class="rounded border-white/20 bg-vv-blue-950 text-vv-green-500" /> High</label>' +
+      '<label class="inline-flex items-center gap-2"><input type="checkbox" name="severity" value="critical" class="rounded border-white/20 bg-vv-blue-950 text-vv-green-500" /> Critical</label>' +
+      '</div></fieldset>' +
       '<label class="block text-xs text-white/40">Title' +
       '<input name="title" required maxlength="120" class="mt-1 w-full bg-vv-blue-950 border border-white/10 rounded-xl px-3 py-2 text-sm" placeholder="Short summary" /></label>' +
       '<label class="block text-xs text-white/40">Details' +
@@ -293,15 +301,26 @@ window.VV_openFeedback = function () {
       '</form></div>';
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
     document.body.appendChild(modal);
+    const kindSelect = modal.querySelector('select[name="kind"]');
+    const severityBox = modal.querySelector('#vv-feedback-severity');
+    const syncSeverity = () => { severityBox.classList.toggle('hidden', kindSelect.value !== 'bug'); };
+    kindSelect.addEventListener('change', syncSeverity);
+    severityBox.addEventListener('change', (e) => {
+      if (e.target.name !== 'severity' || !e.target.checked) return;
+      severityBox.querySelectorAll('input[name="severity"]').forEach((box) => { if (box !== e.target) box.checked = false; });
+    });
+    syncSeverity();
     modal.querySelector('#vv-feedback-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.currentTarget;
       const status = document.getElementById('vv-feedback-status');
+      const picked = form.querySelector('input[name="severity"]:checked');
       const data = {
         kind: form.kind.value,
         title: form.title.value.trim(),
         details: form.details.value.trim(),
         page: location.pathname + location.search,
+        severity: form.kind.value === 'bug' && picked ? picked.value : '',
       };
       status.textContent = 'Sending…';
       status.className = 'text-xs text-white/40';
