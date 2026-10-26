@@ -1441,6 +1441,10 @@ async function submitFeedback(request, env) {
   const title = String(body.title || "").trim().slice(0, 120);
   const details = String(body.details || "").trim().slice(0, 4000);
   const page = String(body.page || "").trim().slice(0, 300);
+  const allowed = new Set(["low", "medium", "high", "critical"]);
+  const severity = kind === "bug" && allowed.has(String(body.severity || "").toLowerCase())
+    ? String(body.severity).toLowerCase()
+    : "";
   if (!title) return json({ error: "A title is required." }, 400);
   if (details.length < 8) return json({ error: "Add a little more detail." }, 400);
   const report = {
@@ -1449,6 +1453,7 @@ async function submitFeedback(request, env) {
     title,
     details,
     page,
+    severity,
     username: uname,
     createdAt: new Date().toISOString(),
   };
@@ -1466,6 +1471,7 @@ async function submitFeedback(request, env) {
     "",
     "---",
     `Type: ${kind}`,
+    severity ? `Severity: ${severity}` : "",
     `From: ${uname}`,
     page ? `Page: ${page}` : "",
     `Report id: ${report.id}`,
@@ -1479,7 +1485,7 @@ async function submitFeedback(request, env) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      title: `[${kind === "suggestion" ? "Suggestion" : "Bug"}] ${title}`,
+      title: `[${kind === "suggestion" ? "Suggestion" : "Bug"}${severity ? " · " + severity : ""}] ${title}`,
       body: issueBody,
       labels: [label],
     }),
@@ -1495,7 +1501,7 @@ async function submitFeedback(request, env) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        title: `[${kind === "suggestion" ? "Suggestion" : "Bug"}] ${title}`,
+        title: `[${kind === "suggestion" ? "Suggestion" : "Bug"}${severity ? " · " + severity : ""}] ${title}`,
         body: issueBody,
       }),
     });
